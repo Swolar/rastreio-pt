@@ -49,10 +49,12 @@ exports.createOrder = async (req, res) => {
         address,
         status: 0, // Confirmed
         events: {
-          create: {
-            status: 0,
-            description: 'Pedido Confirmado'
-          }
+          create: [
+            {
+              status: 0,
+              description: 'Pedido Confirmado'
+            }
+          ]
         }
       }
     });
@@ -66,7 +68,7 @@ exports.createOrder = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating order:', error);
-    res.status(500).json({ error: 'Failed to create order' });
+    res.status(500).json({ error: 'Failed to create order', details: error.message });
   }
 };
 

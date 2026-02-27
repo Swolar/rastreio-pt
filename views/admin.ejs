@@ -115,11 +115,12 @@
           e.target.reset();
           loadOrders();
         } else {
-          alert('Erro ao criar pedido.');
+          const err = await response.json();
+          alert('Erro ao criar pedido: ' + (err.details || err.error));
         }
       } catch (error) {
         console.error('Erro:', error);
-        alert('Erro ao criar pedido.');
+        alert('Erro ao criar pedido: ' + error.message);
       }
     });
 

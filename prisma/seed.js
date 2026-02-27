@@ -70,12 +70,17 @@ async function main() {
   ];
 
   for (const o of orders) {
-    const order = await prisma.order.upsert({
-      where: { code: o.code },
-      update: {},
-      create: o,
-    });
-    console.log(`Created order with code: ${order.code}`);
+    try {
+      const order = await prisma.order.upsert({
+        where: { code: o.code },
+        update: {},
+        create: o,
+      });
+      console.log(`Created/Updated order with code: ${order.code}`);
+    } catch (error) {
+      console.error(`Error creating order ${o.code}:`, error);
+      throw error; // Re-throw to stop seeding and fail
+    }
   }
   
   console.log('Seeding finished.');
