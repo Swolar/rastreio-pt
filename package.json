@@ -1,0 +1,31 @@
+{
+  "name": "rastreio-encomendas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "build": "npx prisma generate",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^5.10.0",
+    "axios": "^1.13.6",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "ejs": "^4.0.1",
+    "express": "^5.2.1",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.1",
+    "prisma": "^5.10.0",
+    "resend": "^6.9.2",
+    "sqlite3": "^5.1.7"
+  }
+}

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rastreio de Encomendas</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="main-container">
+    <div class="search-box">
+      <div style="margin-bottom: 20px; font-size: 3rem; color: var(--primary-color);">
+        <i class="fas fa-search-location"></i>
+      </div>
+      <h1>Rastreio de Encomendas</h1>
+      <p style="margin-bottom: 30px; color: var(--text-muted);">Digite o código de rastreio para acompanhar seu pedido em tempo real.</p>
+      
+      <form action="/rastreio" method="GET" onsubmit="event.preventDefault(); const code = document.getElementById('trackingCode').value; if(code) window.location.href = '/rastreio/' + code;">
+        <input type="text" id="trackingCode" placeholder="Ex: AAAA-BBBB-1234" required>
+        <button type="submit">
+          Rastrear Pedido <i class="fas fa-arrow-right" style="margin-left: 10px;"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

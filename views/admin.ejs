@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Administrativo - Rastreio</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    .admin-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    .btn-submit { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+    .btn-submit:hover { background-color: #0056b3; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+    th { background-color: #f8f9fa; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <h1>Painel Administrativo</h1>
+    
+    <div class="card">
+      <h2>Criar Novo Pedido</h2>
+      <form id="createOrderForm">
+        <div class="form-group">
+          <label for="name">Nome do Cliente:</label>
+          <input type="text" id="name" name="name" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="email">Email do Cliente:</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="address">Endereço:</label>
+          <input type="text" id="address" name="address">
+        </div>
+        
+        <button type="submit" class="btn-submit">Criar Pedido</button>
+      </form>
+    </div>
+    
+    <div class="card" style="margin-top: 30px;">
+      <h2>Pedidos Recentes</h2>
+      <table id="ordersTable">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Pedidos serão carregados aqui -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Carregar pedidos
+    async function loadOrders() {
+      try {
+        const response = await fetch('/api/orders');
+        const orders = await response.json();
+        const tbody = document.querySelector('#ordersTable tbody');
+        tbody.innerHTML = '';
+        
+        const statusMap = [
+          'Confirmado', 'Processando', 'Enviado', 'Em Trânsito', 'Saiu p/ Entrega', 'Entregue'
+        ];
+        
+        orders.forEach(order => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${order.code}</td>
+            <td>${order.name}</td>
+            <td>${order.email}</td>
+            <td>${statusMap[order.status] || order.status}</td>
+            <td>${new Date(order.createdAt).toLocaleDateString('pt-BR')}</td>
+            <td><a href="/rastreio/${order.code}" target="_blank">Ver</a></td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar pedidos:', error);
+      }
+    }
+
+    // Criar pedido
+    document.getElementById('createOrderForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const data = Object.fromEntries(formData.entries());
+      
+      try {
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+          alert('Pedido criado com sucesso!');
+          e.target.reset();
+          loadOrders();
+        } else {
+          alert('Erro ao criar pedido.');
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao criar pedido.');
+      }
+    });
+
+    // Carregar inicialmente
+    loadOrders();
+  </script>
+</body>
+</html>

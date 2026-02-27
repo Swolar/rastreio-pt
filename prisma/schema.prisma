@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id               Int      @id @default(autoincrement())
+  code             String   @unique
+  name             String
+  email            String
+  address          String?
+  status           Int      @default(0) // 0: Confirmed, 1: Processing, 2: Shipped, 3: In Transit, 4: Out for Delivery, 5: Delivery Failed, 6: Redelivery Scheduled, 7: Delivered
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Redelivery fields
+  redeliveryFee    Float    @default(0.0)
+  redeliveryDate   DateTime?
+  isRedeliveryPaid Boolean  @default(false)
+  
+  // New Redelivery Logic
+  resendAttempts   Int      @default(0)
+  scheduledDate    DateTime?
+  resendStatus     String   @default("ACTIVE") // ACTIVE, RESCHEDULE_PENDING, RETURNED_TO_STORE
+
+  events           Event[]
+  resendPayments   ResendPayment[]
+}
+
+model Event {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  status      Int
+  description String
+  timestamp   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id])
+}
+
+model ResendPayment {
+  id            String    @id @default(uuid())
+  orderId       Int
+  order         Order     @relation(fields: [orderId], references: [id])
+  attemptNumber Int
+  amount        Float
+  method        String
+  status        String    // PENDING, PAID, FAILED, EXPIRED
+  scheduledDate DateTime? // Selected redelivery date
+  createdAt     DateTime  @default(now())
+  paidAt        DateTime?
+}
