@@ -8,6 +8,42 @@ const { execSync } = require('child_process');
 let isDbReady = false;
 let dbError = null;
 
+// --- SUPABASE CONNECTION AUTO-FIX ---
+// O Render tem problemas com a porta 5432 (Direct) do Supabase.
+// Vamos forçar o uso da porta 6543 (Pooler) automaticamente.
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.co')) {
+    let newUrl = process.env.DATABASE_URL;
+    let modified = false;
+
+    // 1. Switch Port 5432 -> 6543 (Transaction Pooler)
+    if (newUrl.includes(':5432')) {
+        console.log('[Auto-Fix] Switching Supabase port 5432 -> 6543 (Pooler) for stability.');
+        newUrl = newUrl.replace(':5432', ':6543');
+        modified = true;
+    }
+
+    // 2. Ensure pgbouncer=true is present (Required for port 6543)
+    if (!newUrl.includes('pgbouncer=true')) {
+        console.log('[Auto-Fix] Adding ?pgbouncer=true to connection string.');
+        const separator = newUrl.includes('?') ? '&' : '?';
+        newUrl = `${newUrl}${separator}pgbouncer=true`;
+        modified = true;
+    }
+
+    // 3. Remove ?connect_timeout if it conflicts (Pooler handles keepalive)
+    // Optional: connection_limit=1 for serverless
+    if (!newUrl.includes('connection_limit=')) {
+         const separator = newUrl.includes('?') ? '&' : '?';
+         newUrl = `${newUrl}${separator}connection_limit=1`;
+    }
+
+    if (modified) {
+        process.env.DATABASE_URL = newUrl;
+        console.log('[Auto-Fix] DATABASE_URL updated successfully for Supabase + Render.');
+    }
+}
+// ------------------------------------
+
 // Fallback for DATABASE_URL if not set (Render/Production specific fix)
 if (!process.env.DATABASE_URL) {
   console.log('WARNING: DATABASE_URL not found! Please set it to your PostgreSQL connection string.');
