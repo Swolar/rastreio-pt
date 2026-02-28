@@ -2,6 +2,102 @@
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+exports.sendConfirmationEmail = async (order) => {
+  try {
+    const statusDesc = 'Pedido Confirmado';
+    const trackingUrl = `${process.env.BASE_URL}/rastreio/${order.code}`;
+    
+    const { data, error } = await resend.emails.send({
+      from: process.env.SMTP_FROM || 'onboarding@resend.dev',
+      to: order.email,
+      subject: `Pedido Confirmado #${order.code}`,
+      html: `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pedido Confirmado</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family: Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 25px rgba(0,0,0,0.06);">
+          <tr>
+            <td align="center" style="background:#f8f7fb; padding:18px 20px; border-bottom:1px solid #eee;">
+               <div style="font-size: 24px; font-weight: bold; color: #6A0DAD;">📦 Rastreio</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: linear-gradient(135deg, #6A0DAD, #4B0082); padding:26px 28px;">
+              <div style="color:#fff; font-size:26px; font-weight:700; line-height:1.2; text-align:center;">
+                Pedido Confirmado!
+              </div>
+              <div style="color:rgba(255,255,255,0.85); font-size:13px; text-align:center; margin-top:8px;">
+                Código: <strong style="color:#fff;">${order.code}</strong>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 28px 18px; color:#222;">
+              <div style="font-size:18px; font-weight:700; margin:0 0 8px;">
+                Olá, ${order.name.split(' ')[0]} 👋
+              </div>
+              <div style="font-size:14px; color:#555; line-height:1.6;">
+                Recebemos seu pedido com sucesso! Você pode acompanhar o status da entrega clicando no botão abaixo.
+              </div>
+            </td>
+          </tr>
+          <tr>
+             <td style="padding:0 28px;">
+               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 10px; background:#f3f0fa; border-left:6px solid #6A0DAD; border-radius:10px;">
+                 <tr>
+                   <td style="padding:16px 16px;">
+                     <div style="font-size:12px; color:#6b6b6b; margin-bottom:4px;">Status atual</div>
+                     <div style="font-size:22px; font-weight:800; color:#4B0082; margin:0;">
+                       ${statusDesc} ✅
+                     </div>
+                   </td>
+                 </tr>
+               </table>
+             </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:0 28px 30px;">
+               <a href="${trackingUrl}" 
+                  style="background: linear-gradient(135deg,#6A0DAD,#4B0082);
+                         color:#ffffff; text-decoration:none; padding:14px 26px;
+                         border-radius:10px; font-size:15px; font-weight:800; display:inline-block; margin-top: 20px;">
+                  Acompanhar Pedido
+               </a>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="background:#fafafa; padding:16px 20px; font-size:12px; color:#999; border-top:1px solid #eee;">
+              Este é um e-mail automático.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `
+    });
+
+    if (error) {
+      console.error(`Error sending confirmation email to ${order.email}:`, error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(`Error sending confirmation email:`, error);
+    return false;
+  }
+};
+
 exports.sendRescheduleConfirmation = async (order, date) => {
   try {
     const statusDesc = 'Reenvio Agendado';

@@ -60,7 +60,7 @@ exports.createOrder = async (req, res) => {
     });
 
     // Send confirmation email (optional, but good practice)
-    // await emailService.sendConfirmationEmail(order); 
+    await emailService.sendConfirmationEmail(order); 
 
     res.status(201).json({ 
       message: 'Order created successfully', 
