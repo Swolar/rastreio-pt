@@ -6,6 +6,7 @@ const { execSync } = require('child_process');
 
 // Global flag to track DB readiness
 let isDbReady = false;
+let dbError = null;
 
 // Fallback for DATABASE_URL if not set (Render/Production specific fix)
 if (!process.env.DATABASE_URL) {
@@ -94,6 +95,32 @@ app.use((req, res, next) => {
     }
 
     if (!isDbReady) {
+        if (dbError) {
+             return res.status(500).send(`
+                <!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Erro na Inicialização</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 2rem; background: #fff0f0; color: #cc0000; }
+                        .container { background: white; padding: 2rem; border-radius: 8px; border: 1px solid #ffcccc; }
+                        pre { background: #eee; padding: 1rem; overflow-x: auto; color: #333; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>Falha ao conectar com o Banco de Dados</h2>
+                        <p>Ocorreu um erro ao tentar configurar o Supabase. Por favor, verifique as configurações.</p>
+                        <h3>Detalhes do Erro:</h3>
+                        <pre>${dbError}</pre>
+                        <p>Se o erro for de "connection", verifique a DATABASE_URL no Render.</p>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+
         // Return a friendly loading page
         return res.status(503).send(`
             <!DOCTYPE html>
@@ -142,6 +169,7 @@ const server = app.listen(PORT, () => {
   exec('npx prisma db push --accept-data-loss', (error, stdout, stderr) => {
       if (error) {
           console.error(`DB Push Error: ${error.message}`);
+          dbError = error.message + "\n\nSTDERR:\n" + stderr;
           return;
       }
       if (stderr) console.error(`DB Push Stderr: ${stderr}`);
