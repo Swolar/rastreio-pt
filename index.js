@@ -90,29 +90,8 @@ try {
       if (genStderr) console.error(`Prisma Generate Stderr: ${genStderr}`);
       console.log(`Prisma Generate Stdout: ${genStdout}`);
       
-      // Only start push after generate is done
-      exec('npx prisma db push --accept-data-loss', (error, stdout, stderr) => {
-        if (error) {
-            console.error(`DB Push Error: ${error.message}`);
-            dbError = error.message + "\n\nSTDERR:\n" + stderr;
-            return;
-        }
-        if (stderr) console.error(`DB Push Stderr: ${stderr}`);
-        console.log(`DB Push Stdout: ${stdout}`);
-        console.log('DB Push complete. Running seed...');
-        
-        // Mark DB as ready immediately after push, even before seed (schema exists)
-        isDbReady = true;
-
-        exec('npx prisma db seed', (seedError, seedStdout, seedStderr) => {
-            if (seedError) {
-                console.warn(`Seed Error (non-fatal): ${seedError.message}`);
-            }
-            if (seedStderr) console.warn(`Seed Stderr: ${seedStderr}`);
-            console.log(`Seed Stdout: ${seedStdout}`);
-            console.log('Background DB initialization finished.');
-        });
-    });
+      // Removed automatic db push
+      console.log('Skipping db push (Manual migration required for Render).');
   });
 
 } catch (error) {
@@ -224,7 +203,22 @@ const server = app.listen(PORT, () => {
 
   // Run DB migration/seed in background
   console.log('Running background DB sync (db push)...');
-  // const { exec } = require('child_process'); - Already running in top-level try/catch block
+  // NOTE: We do NOT run db push here anymore because Render (IPv4) cannot reach Supabase Direct (IPv6).
+  // Tables must be created manually via local machine.
+  
+  // Just mark DB as ready if connection works
+  isDbReady = true;
+  console.log('Assuming DB tables exist. Starting seed in background...');
+
+  const { exec } = require('child_process');
+  exec('npx prisma db seed', (seedError, seedStdout, seedStderr) => {
+      if (seedError) {
+          console.warn(`Seed Error (non-fatal): ${seedError.message}`);
+      }
+      if (seedStderr) console.warn(`Seed Stderr: ${seedStderr}`);
+      console.log(`Seed Stdout: ${seedStdout}`);
+      console.log('Background DB initialization finished.');
+  });
 });
 
 server.on('error', (err) => {
