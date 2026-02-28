@@ -24,9 +24,10 @@ exports.sendConfirmationEmail = async (order) => {
     const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
     
     const { data, error } = await resend.emails.send({
-      from: 'nao-responda@site-seguro-verificado.fun',
+      from: 'Rastreio de Pedido <nao-responda@site-seguro-verificado.fun>',
       to: order.email,
       subject: `Pedido Confirmado #${order.code}`,
+      text: `Olá ${order.name.split(' ')[0]}, seu pedido foi confirmado! Código: ${order.code}. Acompanhe em: ${trackingUrl}`,
       html: `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -125,9 +126,10 @@ exports.sendRescheduleConfirmation = async (order, date) => {
     const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
     
     const { data, error } = await resend.emails.send({
-      from: 'nao-responda@site-seguro-verificado.fun',
+      from: 'Rastreio de Pedido <nao-responda@site-seguro-verificado.fun>',
       to: order.email,
       subject: `Reagendamento Confirmado #${order.code}`,
+      text: `Olá ${order.name.split(' ')[0]}, seu reagendamento foi confirmado para ${new Date(date).toLocaleDateString('pt-BR')}. Código: ${order.code}. Acompanhe em: ${trackingUrl}`,
       html: `
 <!DOCTYPE html>
 <html lang="pt-BR">
