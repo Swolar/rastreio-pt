@@ -1,4 +1,15 @@
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
+
+// Fallback for DATABASE_URL if not set (Render/Production specific fix)
+if (!process.env.DATABASE_URL) {
+  console.log('WARNING: DATABASE_URL not found, using default file:./dev.db');
+  process.env.DATABASE_URL = 'file:./dev.db';
+} else {
+  console.log('DATABASE_URL is set.');
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
