@@ -33,6 +33,14 @@ try {
      // Force SQLite provider
      schemaContent = schemaContent.replace(/provider\s*=\s*"postgresql"/, 'provider = "sqlite"');
      fs.writeFileSync(schemaPath, schemaContent);
+  } else {
+     console.log('Detected PostgreSQL URL. Ensuring schema.prisma uses postgresql provider.');
+     const fs = require('fs');
+     const schemaPath = './prisma/schema.prisma';
+     let schemaContent = fs.readFileSync(schemaPath, 'utf8');
+     // Force PostgreSQL provider
+     schemaContent = schemaContent.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
+     fs.writeFileSync(schemaPath, schemaContent);
   }
 
   execSync('npx prisma generate', { stdio: 'inherit' });
