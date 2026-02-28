@@ -4,6 +4,9 @@ if (process.env.NODE_ENV !== 'production') {
 
 const { execSync } = require('child_process');
 
+// Global flag to track DB readiness
+let isDbReady = false;
+
 // Fallback for DATABASE_URL if not set (Render/Production specific fix)
 if (!process.env.DATABASE_URL) {
   console.log('WARNING: DATABASE_URL not found! Please set it to your PostgreSQL connection string.');
@@ -83,6 +86,44 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// DB Loading Middleware
+app.use((req, res, next) => {
+    // Allow health checks and static files even if DB is not ready
+    if (req.path === '/health' || req.path.startsWith('/css') || req.path.startsWith('/js') || req.path.startsWith('/images')) {
+        return next();
+    }
+
+    if (!isDbReady) {
+        // Return a friendly loading page
+        return res.status(503).send(`
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Sistema Iniciando...</title>
+                <meta http-equiv="refresh" content="5">
+                <style>
+                    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; color: #333; }
+                    .container { text-align: center; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="spinner"></div>
+                    <h2>Sistema Iniciando...</h2>
+                    <p>Estamos configurando o banco de dados pela primeira vez.</p>
+                    <p>Essa página vai atualizar automaticamente em 5 segundos.</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+    next();
+});
+
 // Routes
 app.use('/', routes);
 
@@ -107,6 +148,9 @@ const server = app.listen(PORT, () => {
       console.log(`DB Push Stdout: ${stdout}`);
       console.log('DB Push complete. Running seed...');
       
+      // Mark DB as ready immediately after push, even before seed (schema exists)
+      isDbReady = true;
+
       exec('node prisma/seed.js', (seedError, seedStdout, seedStderr) => {
           if (seedError) {
               console.warn(`Seed Error (non-fatal): ${seedError.message}`);
