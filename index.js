@@ -25,27 +25,22 @@ if (!process.env.DATABASE_URL) {
 try {
   console.log('Running DB initialization (Prisma Generate & Push)...');
   
-  // Dynamic provider switch based on URL
-  const isSqlite = !process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith('file:');
+  // Force PostgreSQL provider in schema.prisma
+  const fs = require('fs');
+  const schemaPath = './prisma/schema.prisma';
+  let schemaContent = fs.readFileSync(schemaPath, 'utf8');
   
-  if (isSqlite) {
-     console.log('Detected SQLite URL. Please update DATABASE_URL to PostgreSQL connection string in Render!');
-     // Temporarily writing a schema.prisma for SQLite to avoid crash
-     const fs = require('fs');
-     const schemaPath = './prisma/schema.prisma';
-     let schemaContent = fs.readFileSync(schemaPath, 'utf8');
-     // Force SQLite provider
-     schemaContent = schemaContent.replace(/provider\s*=\s*"postgresql"/, 'provider = "sqlite"');
-     fs.writeFileSync(schemaPath, schemaContent);
-  } else {
-     console.log('Detected PostgreSQL URL. Ensuring schema.prisma uses postgresql provider.');
-     const fs = require('fs');
-     const schemaPath = './prisma/schema.prisma';
-     let schemaContent = fs.readFileSync(schemaPath, 'utf8');
-     // Force PostgreSQL provider
-     schemaContent = schemaContent.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
-     fs.writeFileSync(schemaPath, schemaContent);
+  // Ensure provider is postgresql
+  if (schemaContent.includes('provider = "sqlite"')) {
+      console.log('Updating schema.prisma to use postgresql provider...');
+      schemaContent = schemaContent.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
+      fs.writeFileSync(schemaPath, schemaContent);
   }
+
+  // Log sanitized DATABASE_URL for debugging
+  const dbUrl = process.env.DATABASE_URL || '';
+  const sanitizedUrl = dbUrl.replace(/:([^:@]+)@/, ':****@');
+  console.log(`Using DATABASE_URL: ${sanitizedUrl}`);
 
   execSync('npx prisma generate', { stdio: 'inherit' });
   
