@@ -71,20 +71,26 @@ try {
   console.log('--------------------');
 
   // Ensure provider is postgresql
+  let schemaChanged = false;
   if (schemaContent.includes('provider = "sqlite"')) {
       console.log('Updating schema.prisma to use postgresql provider...');
       schemaContent = schemaContent.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
       fs.writeFileSync(schemaPath, schemaContent);
-      
-      console.log('Schema updated. Running synchronous prisma generate...');
+      schemaChanged = true;
+  } else {
+      console.log('Schema already uses postgresql provider.');
+  }
+  
+  // ALWAYS regenerate client in production to ensure it matches the schema
+  // This fixes the issue where build step might use cached/old schema
+  if (process.env.NODE_ENV === 'production' || schemaChanged) {
+      console.log('Running synchronous prisma generate to ensure client is up-to-date...');
       try {
         execSync('npx prisma generate', { stdio: 'inherit' });
         console.log('Prisma generate completed synchronously.');
       } catch (e) {
         console.error('Prisma generate failed:', e);
       }
-  } else {
-      console.log('Schema already uses postgresql provider.');
   }
 
   // Log sanitized DATABASE_URL for debugging
