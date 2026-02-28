@@ -18,7 +18,8 @@ async function main() {
   });
 
   console.log('Order created:', order);
-  console.log(`Access http://localhost:3000/reenvio/${code} to test.`);
+  const baseUrl = process.env.BASE_URL || 'https://rastreio-pt.onrender.com';
+  console.log(`Access ${baseUrl}/reenvio/${code} to test.`);
   
   // Also create one that is at limit
   const limitCode = 'LIMIT-TEST-' + Math.floor(Math.random() * 1000);
@@ -33,7 +34,7 @@ async function main() {
       resendStatus: 'ACTIVE' // Controller should catch attempts >= 5
     }
   });
-  console.log(`Access http://localhost:3000/reenvio/${limitCode} to test limit (should show returned or blocked).`);
+  console.log(`Access ${baseUrl}/reenvio/${limitCode} to test limit (should show returned or blocked).`);
 }
 
 main()
