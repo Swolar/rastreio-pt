@@ -11,13 +11,30 @@ if (!process.env.DATABASE_URL) {
   console.log('DATABASE_URL is set.');
   
   if (process.env.DATABASE_URL.startsWith('file:')) {
-    console.warn('WARNING: DATABASE_URL starts with "file:", but we are using PostgreSQL. Please update your environment variable!');
+    console.warn('WARNING: DATABASE_URL starts with "file:", but we are using PostgreSQL. Overriding with default SQLite for compatibility check (Please update Env Var).');
+    // NOTE: This is a fallback to prevent crash if user forgot to update Env Var
+    // In production, user MUST update DATABASE_URL
   }
 }
 
 // Auto-initialize DB (Fix for Render ephemeral storage)
 try {
   console.log('Running DB initialization (Prisma Generate & Push)...');
+  
+  // Dynamic provider switch based on URL
+  const isSqlite = !process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith('file:');
+  
+  if (isSqlite) {
+     console.log('Detected SQLite URL. Please update DATABASE_URL to PostgreSQL connection string in Render!');
+     // Temporarily writing a schema.prisma for SQLite to avoid crash
+     const fs = require('fs');
+     const schemaPath = './prisma/schema.prisma';
+     let schemaContent = fs.readFileSync(schemaPath, 'utf8');
+     // Force SQLite provider
+     schemaContent = schemaContent.replace(/provider\s*=\s*"postgresql"/, 'provider = "sqlite"');
+     fs.writeFileSync(schemaPath, schemaContent);
+  }
+
   execSync('npx prisma generate', { stdio: 'inherit' });
   // Using db push for quick schema sync without migrations history issues
   execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
