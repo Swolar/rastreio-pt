@@ -66,11 +66,25 @@ try {
   const schemaPath = './prisma/schema.prisma';
   let schemaContent = fs.readFileSync(schemaPath, 'utf8');
   
+  console.log('--- SCHEMA DEBUG ---');
+  console.log(schemaContent);
+  console.log('--------------------');
+
   // Ensure provider is postgresql
   if (schemaContent.includes('provider = "sqlite"')) {
       console.log('Updating schema.prisma to use postgresql provider...');
       schemaContent = schemaContent.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
       fs.writeFileSync(schemaPath, schemaContent);
+      
+      console.log('Schema updated. Running synchronous prisma generate...');
+      try {
+        execSync('npx prisma generate', { stdio: 'inherit' });
+        console.log('Prisma generate completed synchronously.');
+      } catch (e) {
+        console.error('Prisma generate failed:', e);
+      }
+  } else {
+      console.log('Schema already uses postgresql provider.');
   }
 
   // Log sanitized DATABASE_URL for debugging
