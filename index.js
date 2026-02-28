@@ -44,20 +44,15 @@ try {
   }
 
   execSync('npx prisma generate', { stdio: 'inherit' });
-  // Using db push for quick schema sync without migrations history issues
-  execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
   
-  console.log('Seeding database...');
-  try {
-      execSync('node prisma/seed.js', { stdio: 'inherit' });
-  } catch (seedError) {
-      console.warn('Seed failed (might be duplicate unique constraints), continuing...', seedError.message);
-  }
+  // Initialize DB in background to avoid Render timeout
+  const { exec } = require('child_process');
   
-  console.log('DB Initialization complete.');
+  console.log('Starting server immediately to satisfy Render port binding...');
+  console.log('DB Push and Seed will run in background.');
+
 } catch (error) {
-  console.error('Failed to initialize DB:', error);
-  // Don't exit process, try to run anyway
+  console.error('Failed to prepare DB schema:', error);
 }
 
 const express = require('express');
@@ -98,6 +93,29 @@ const server = app.listen(PORT, () => {
   // Start cron jobs
   cronService.start();
   console.log('Cron jobs started');
+
+  // Run DB migration/seed in background
+  console.log('Running background DB sync (db push)...');
+  const { exec } = require('child_process');
+  
+  exec('npx prisma db push --accept-data-loss', (error, stdout, stderr) => {
+      if (error) {
+          console.error(`DB Push Error: ${error.message}`);
+          return;
+      }
+      if (stderr) console.error(`DB Push Stderr: ${stderr}`);
+      console.log(`DB Push Stdout: ${stdout}`);
+      console.log('DB Push complete. Running seed...');
+      
+      exec('node prisma/seed.js', (seedError, seedStdout, seedStderr) => {
+          if (seedError) {
+              console.warn(`Seed Error (non-fatal): ${seedError.message}`);
+          }
+          if (seedStderr) console.warn(`Seed Stderr: ${seedStderr}`);
+          console.log(`Seed Stdout: ${seedStdout}`);
+          console.log('Background DB initialization finished.');
+      });
+  });
 });
 
 server.on('error', (err) => {
