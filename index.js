@@ -41,14 +41,43 @@ try {
   const dbUrl = process.env.DATABASE_URL || '';
   const sanitizedUrl = dbUrl.replace(/:([^:@]+)@/, ':****@');
   console.log(`Using DATABASE_URL: ${sanitizedUrl}`);
-
-  execSync('npx prisma generate', { stdio: 'inherit' });
   
   // Initialize DB in background to avoid Render timeout
   const { exec } = require('child_process');
   
   console.log('Starting server immediately to satisfy Render port binding...');
   console.log('DB Push and Seed will run in background.');
+
+  // Run generate in background too to prevent startup freeze
+  exec('npx prisma generate', (genError, genStdout, genStderr) => {
+      if (genError) console.error(`Prisma Generate Error: ${genError.message}`);
+      if (genStderr) console.error(`Prisma Generate Stderr: ${genStderr}`);
+      console.log(`Prisma Generate Stdout: ${genStdout}`);
+      
+      // Only start push after generate is done
+      exec('npx prisma db push --accept-data-loss', (error, stdout, stderr) => {
+        if (error) {
+            console.error(`DB Push Error: ${error.message}`);
+            dbError = error.message + "\n\nSTDERR:\n" + stderr;
+            return;
+        }
+        if (stderr) console.error(`DB Push Stderr: ${stderr}`);
+        console.log(`DB Push Stdout: ${stdout}`);
+        console.log('DB Push complete. Running seed...');
+        
+        // Mark DB as ready immediately after push, even before seed (schema exists)
+        isDbReady = true;
+
+        exec('npx prisma db seed', (seedError, seedStdout, seedStderr) => {
+            if (seedError) {
+                console.warn(`Seed Error (non-fatal): ${seedError.message}`);
+            }
+            if (seedStderr) console.warn(`Seed Stderr: ${seedStderr}`);
+            console.log(`Seed Stdout: ${seedStdout}`);
+            console.log('Background DB initialization finished.');
+        });
+    });
+  });
 
 } catch (error) {
   console.error('Failed to prepare DB schema:', error);
@@ -159,30 +188,7 @@ const server = app.listen(PORT, () => {
 
   // Run DB migration/seed in background
   console.log('Running background DB sync (db push)...');
-  const { exec } = require('child_process');
-  
-  exec('npx prisma db push --accept-data-loss', (error, stdout, stderr) => {
-      if (error) {
-          console.error(`DB Push Error: ${error.message}`);
-          dbError = error.message + "\n\nSTDERR:\n" + stderr;
-          return;
-      }
-      if (stderr) console.error(`DB Push Stderr: ${stderr}`);
-      console.log(`DB Push Stdout: ${stdout}`);
-      console.log('DB Push complete. Running seed...');
-      
-      // Mark DB as ready immediately after push, even before seed (schema exists)
-      isDbReady = true;
-
-      exec('npx prisma db seed', (seedError, seedStdout, seedStderr) => {
-          if (seedError) {
-              console.warn(`Seed Error (non-fatal): ${seedError.message}`);
-          }
-          if (seedStderr) console.warn(`Seed Stderr: ${seedStderr}`);
-          console.log(`Seed Stdout: ${seedStdout}`);
-          console.log('Background DB initialization finished.');
-      });
-  });
+  // const { exec } = require('child_process'); - Already running in top-level try/catch block
 });
 
 server.on('error', (err) => {
