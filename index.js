@@ -179,7 +179,7 @@ const server = app.listen(PORT, () => {
       // Mark DB as ready immediately after push, even before seed (schema exists)
       isDbReady = true;
 
-      exec('node prisma/seed.js', (seedError, seedStdout, seedStderr) => {
+      exec('npx prisma db seed', (seedError, seedStdout, seedStderr) => {
           if (seedError) {
               console.warn(`Seed Error (non-fatal): ${seedError.message}`);
           }
