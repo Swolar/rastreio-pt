@@ -1,11 +1,27 @@
 
 const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
+
+let resend;
+if (process.env.RESEND_API_KEY) {
+  try {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  } catch (error) {
+    console.error('Failed to initialize Resend client:', error);
+  }
+} else {
+  console.warn('WARNING: RESEND_API_KEY is missing. Email service will be disabled.');
+}
 
 exports.sendConfirmationEmail = async (order) => {
+  if (!resend) {
+    console.warn('Skipping email: Resend client not initialized.');
+    return false;
+  }
+  
   try {
     const statusDesc = 'Pedido Confirmado';
-    const trackingUrl = `${process.env.BASE_URL}/rastreio/${order.code}`;
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
     
     const { data, error } = await resend.emails.send({
       from: process.env.SMTP_FROM || 'onboarding@resend.dev',
@@ -99,9 +115,14 @@ exports.sendConfirmationEmail = async (order) => {
 };
 
 exports.sendRescheduleConfirmation = async (order, date) => {
+  if (!resend) {
+    console.warn('Skipping email: Resend client not initialized.');
+    return false;
+  }
   try {
     const statusDesc = 'Reenvio Agendado';
-    const trackingUrl = `${process.env.BASE_URL}/rastreio/${order.code}`;
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
     
     const { data, error } = await resend.emails.send({
       from: process.env.SMTP_FROM || 'onboarding@resend.dev',
