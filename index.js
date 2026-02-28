@@ -8,41 +8,32 @@ const { execSync } = require('child_process');
 let isDbReady = false;
 let dbError = null;
 
-// --- SUPABASE CONNECTION AUTO-FIX ---
-// O Render tem problemas com a porta 5432 (Direct) do Supabase.
-// Vamos forçar o uso da porta 6543 (Pooler) automaticamente.
-if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.co')) {
-    let newUrl = process.env.DATABASE_URL;
-    let modified = false;
+// --- DNS CHECK FOR DEBUGGING ---
+const dns = require('dns');
+const { URL } = require('url');
 
-    // 1. Switch Port 5432 -> 6543 (Transaction Pooler)
-    if (newUrl.includes(':5432')) {
-        console.log('[Auto-Fix] Switching Supabase port 5432 -> 6543 (Pooler) for stability.');
-        newUrl = newUrl.replace(':5432', ':6543');
-        modified = true;
-    }
-
-    // 2. Ensure pgbouncer=true is present (Required for port 6543)
-    if (!newUrl.includes('pgbouncer=true')) {
-        console.log('[Auto-Fix] Adding ?pgbouncer=true to connection string.');
-        const separator = newUrl.includes('?') ? '&' : '?';
-        newUrl = `${newUrl}${separator}pgbouncer=true`;
-        modified = true;
-    }
-
-    // 3. Remove ?connect_timeout if it conflicts (Pooler handles keepalive)
-    // Optional: connection_limit=1 for serverless
-    if (!newUrl.includes('connection_limit=')) {
-         const separator = newUrl.includes('?') ? '&' : '?';
-         newUrl = `${newUrl}${separator}connection_limit=1`;
-    }
-
-    if (modified) {
-        process.env.DATABASE_URL = newUrl;
-        console.log('[Auto-Fix] DATABASE_URL updated successfully for Supabase + Render.');
+if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith('file:')) {
+    try {
+        // Extract hostname manually to handle postgres://
+        const match = process.env.DATABASE_URL.match(/@([^:/]+)/);
+        if (match && match[1]) {
+            const hostname = match[1];
+            console.log(`Checking DNS for database host: ${hostname}`);
+            dns.lookup(hostname, (err, address, family) => {
+                if (err) {
+                    console.error(`[DNS Error] Could not resolve ${hostname}:`, err);
+                } else {
+                    console.log(`[DNS Result] ${hostname} -> ${address} (IPv${family})`);
+                    if (family === 6) {
+                        console.warn(`[WARNING] Database host resolves to IPv6. Render (IPv4) may fail to connect unless using Supabase Transaction Pooler.`);
+                    }
+                }
+            });
+        }
+    } catch (e) {
+        console.error('Failed to parse DATABASE_URL for DNS check');
     }
 }
-// ------------------------------------
 
 // Fallback for DATABASE_URL if not set (Render/Production specific fix)
 if (!process.env.DATABASE_URL) {
