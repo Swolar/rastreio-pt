@@ -69,12 +69,12 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0) => {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #7c3aed, #4c1d95); padding: 40px 30px; text-align: center;">
-              <div style="background: rgba(255,255,255,0.2); width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 32px;">📦</span>
+            <td style="background-color: #7c3aed; background: linear-gradient(135deg, #7c3aed, #4c1d95); padding: 40px 30px; text-align: center;">
+              <div style="background-color: rgba(255,255,255,0.2); width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 20px; display: inline-flex; align-items: center; justify-content: center;">
+                <span style="font-size: 32px; line-height: 64px;">📦</span>
               </div>
               <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700;">${title}</h1>
-              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 16px;">Código de rastreio: <strong style="color: #ffffff;">${order.code}</strong></p>
+              <p style="color: #e5e7eb; margin: 10px 0 0; font-size: 16px;">Código de rastreio: <strong style="color: #ffffff; background-color: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px;">${order.code}</strong></p>
             </td>
           </tr>
 
