@@ -24,7 +24,7 @@ exports.sendConfirmationEmail = async (order) => {
     const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
     
     const { data, error } = await resend.emails.send({
-      from: process.env.SMTP_FROM || 'onboarding@resend.dev',
+      from: process.env.SMTP_FROM || 'nao-responda@site-seguro-verificado.fun',
       to: order.email,
       subject: `Pedido Confirmado #${order.code}`,
       html: `
@@ -125,7 +125,7 @@ exports.sendRescheduleConfirmation = async (order, date) => {
     const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
     
     const { data, error } = await resend.emails.send({
-      from: process.env.SMTP_FROM || 'onboarding@resend.dev',
+      from: process.env.SMTP_FROM || 'nao-responda@site-seguro-verificado.fun',
       to: order.email,
       subject: `Reagendamento Confirmado #${order.code}`,
       html: `
