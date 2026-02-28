@@ -2,12 +2,25 @@ if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 
+const { execSync } = require('child_process');
+
 // Fallback for DATABASE_URL if not set (Render/Production specific fix)
 if (!process.env.DATABASE_URL) {
   console.log('WARNING: DATABASE_URL not found, using default file:./dev.db');
   process.env.DATABASE_URL = 'file:./dev.db';
 } else {
   console.log('DATABASE_URL is set.');
+}
+
+// Auto-initialize DB (Fix for Render ephemeral storage)
+try {
+  console.log('Running DB initialization...');
+  execSync('npx prisma generate', { stdio: 'inherit' });
+  execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+  execSync('node prisma/seed.js', { stdio: 'inherit' });
+  console.log('DB Initialization complete.');
+} catch (error) {
+  console.error('Failed to initialize DB:', error);
 }
 
 const express = require('express');
