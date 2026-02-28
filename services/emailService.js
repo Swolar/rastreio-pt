@@ -1,4 +1,3 @@
-
 const { Resend } = require('resend');
 
 let resend;
@@ -12,87 +11,119 @@ if (process.env.RESEND_API_KEY) {
   console.warn('WARNING: RESEND_API_KEY is missing. Email service will be disabled.');
 }
 
-exports.sendConfirmationEmail = async (order) => {
-  if (!resend) {
-    console.warn('Skipping email: Resend client not initialized.');
-    return false;
-  }
+const getBaseUrl = () => {
+  if (process.env.BASE_URL) return process.env.BASE_URL;
+  if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL;
+  return 'https://rastreio-pt.onrender.com'; // Default production fallback
+};
+
+const getEmailTemplate = (order, title, message, activeStepIndex = 0) => {
+  const baseUrl = getBaseUrl();
+  const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
+  const steps = [
+    { label: 'Pedido confirmado', date: new Date().toLocaleDateString('pt-BR') },
+    { label: 'Em separação', date: 'Aguardando' },
+    { label: 'Em trânsito', date: 'Aguardando' },
+    { label: 'Saiu para entrega', date: 'Aguardando' },
+    { label: 'Entregue', date: 'Aguardando' }
+  ];
+
+  // Update dates based on active step (mock logic for visual consistency)
+  if (activeStepIndex > 0) steps[0].date = 'Concluído';
+  if (activeStepIndex > 1) steps[1].date = 'Concluído';
   
-  try {
-    const statusDesc = 'Pedido Confirmado';
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
+  const timelineHtml = steps.map((step, index) => {
+    const isActive = index === activeStepIndex;
+    const isCompleted = index < activeStepIndex;
+    const color = isActive ? '#6A0DAD' : (isCompleted ? '#6A0DAD' : '#d1d5db');
+    const opacity = isActive || isCompleted ? '1' : '0.5';
     
-    const { data, error } = await resend.emails.send({
-      from: 'Rastreio de Pedido <nao-responda@site-seguro-verificado.fun>',
-      to: order.email,
-      subject: `Pedido Confirmado #${order.code}`,
-      text: `Olá ${order.name.split(' ')[0]}, seu pedido foi confirmado! Código: ${order.code}. Acompanhe em: ${trackingUrl}`,
-      html: `
+    return `
+      <tr>
+        <td style="vertical-align: top; padding-bottom: 20px; width: 30px;">
+          <div style="width: 16px; height: 16px; border-radius: 50%; background-color: ${color}; border: 2px solid ${color};"></div>
+          ${index !== steps.length - 1 ? `<div style="width: 2px; height: 40px; background-color: #e5e7eb; margin-left: 9px; margin-top: 5px;"></div>` : ''}
+        </td>
+        <td style="vertical-align: top; padding-bottom: 20px;">
+          <div style="font-weight: ${isActive ? 'bold' : 'normal'}; color: ${isActive ? '#4B0082' : '#374151'}; font-size: 14px;">
+            ${step.label} ${isActive ? '(Atual)' : ''}
+          </div>
+          <div style="color: #6b7280; font-size: 12px;">${step.date}</div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pedido Confirmado</title>
+  <title>${title}</title>
 </head>
-<body style="margin:0; padding:0; background-color:#f4f6f9; font-family: Arial, Helvetica, sans-serif;">
+<body style="margin:0; padding:0; background-color:#f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9; padding:40px 0;">
     <tr>
       <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 25px rgba(0,0,0,0.06);">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+          <!-- Header -->
           <tr>
-            <td align="center" style="background:#f8f7fb; padding:18px 20px; border-bottom:1px solid #eee;">
-               <div style="font-size: 24px; font-weight: bold; color: #6A0DAD;">📦 Rastreio</div>
+            <td style="background: linear-gradient(135deg, #7c3aed, #4c1d95); padding: 40px 30px; text-align: center;">
+              <div style="background: rgba(255,255,255,0.2); width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 32px;">📦</span>
+              </div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 700;">${title}</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 16px;">Código de rastreio: <strong style="color: #ffffff;">${order.code}</strong></p>
             </td>
           </tr>
+
+          <!-- Content -->
           <tr>
-            <td style="background: linear-gradient(135deg, #6A0DAD, #4B0082); padding:26px 28px;">
-              <div style="color:#fff; font-size:26px; font-weight:700; line-height:1.2; text-align:center;">
-                Pedido Confirmado!
+            <td style="padding: 40px 30px;">
+              <h2 style="color: #1f2937; margin: 0 0 20px; font-size: 20px;">Olá, ${order.name.split(' ')[0]} 👋</h2>
+              <p style="color: #4b5563; line-height: 1.6; margin: 0 0 30px; font-size: 16px;">
+                ${message}
+              </p>
+
+              <!-- Status Card -->
+              <div style="background-color: #f3f0ff; border-radius: 12px; padding: 20px; margin-bottom: 30px; border-left: 4px solid #7c3aed;">
+                <p style="margin: 0; color: #6b21a8; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Status Atual</p>
+                <p style="margin: 8px 0 0; color: #4c1d95; font-size: 18px; font-weight: 700;">
+                  ${steps[activeStepIndex].label} 🚛
+                </p>
+                <p style="margin: 4px 0 0; color: #6b7280; font-size: 14px;">Atualizado em: ${new Date().toLocaleDateString('pt-BR')}</p>
               </div>
-              <div style="color:rgba(255,255,255,0.85); font-size:13px; text-align:center; margin-top:8px;">
-                Código: <strong style="color:#fff;">${order.code}</strong>
+
+              <!-- Timeline -->
+              <div style="margin-bottom: 30px;">
+                <p style="color: #1f2937; font-weight: 600; margin-bottom: 15px; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px;">Linha do tempo do rastreio</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  ${timelineHtml}
+                </table>
               </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:28px 28px 18px; color:#222;">
-              <div style="font-size:18px; font-weight:700; margin:0 0 8px;">
-                Olá, ${order.name.split(' ')[0]} 👋
-              </div>
-              <div style="font-size:14px; color:#555; line-height:1.6;">
-                Recebemos seu pedido com sucesso! Você pode acompanhar o status da entrega clicando no botão abaixo.
-              </div>
-            </td>
-          </tr>
-          <tr>
-             <td style="padding:0 28px;">
-               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 10px; background:#f3f0fa; border-left:6px solid #6A0DAD; border-radius:10px;">
-                 <tr>
-                   <td style="padding:16px 16px;">
-                     <div style="font-size:12px; color:#6b6b6b; margin-bottom:4px;">Status atual</div>
-                     <div style="font-size:22px; font-weight:800; color:#4B0082; margin:0;">
-                       ${statusDesc} ✅
-                     </div>
-                   </td>
-                 </tr>
-               </table>
-             </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding:0 28px 30px;">
-               <a href="${trackingUrl}" 
-                  style="background: linear-gradient(135deg,#6A0DAD,#4B0082);
-                         color:#ffffff; text-decoration:none; padding:14px 26px;
-                         border-radius:10px; font-size:15px; font-weight:800; display:inline-block; margin-top: 20px;">
+
+              <!-- CTA Button -->
+              <div style="text-align: center; margin-top: 40px;">
+                <a href="${trackingUrl}" style="background-color: #7c3aed; color: #ffffff; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3);">
                   Acompanhar Pedido
-               </a>
+                </a>
+              </div>
+
+              <!-- Fallback Link -->
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                <p style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">Se o botão não funcionar, copie e cole este link no navegador:</p>
+                <a href="${trackingUrl}" style="color: #7c3aed; font-size: 14px; word-break: break-all;">${trackingUrl}</a>
+              </div>
             </td>
           </tr>
+
+          <!-- Footer -->
           <tr>
-            <td align="center" style="background:#fafafa; padding:16px 20px; font-size:12px; color:#999; border-top:1px solid #eee;">
-              Este é um e-mail automático.
+            <td style="background-color: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                Este é um e-mail automático. Por favor, não responda.
+              </p>
             </td>
           </tr>
         </table>
@@ -101,7 +132,27 @@ exports.sendConfirmationEmail = async (order) => {
   </table>
 </body>
 </html>
-      `
+  `;
+};
+
+exports.sendConfirmationEmail = async (order) => {
+  if (!resend) {
+    console.warn('Skipping email: Resend client not initialized.');
+    return false;
+  }
+  
+  try {
+    const title = 'Pedido Confirmado';
+    const message = 'Recebemos seu pedido com sucesso! Estamos preparando tudo com carinho. Você pode acompanhar cada etapa da entrega através da nossa linha do tempo abaixo.';
+    const html = getEmailTemplate(order, title, message, 0); // 0 = Pedido confirmado
+    const text = `Olá ${order.name.split(' ')[0]}, seu pedido foi confirmado! Código: ${order.code}. Acompanhe em: ${getBaseUrl()}/rastreio/${order.code}`;
+    
+    const { data, error } = await resend.emails.send({
+      from: 'Rastreio de Pedido <nao-responda@site-seguro-verificado.fun>',
+      to: order.email,
+      subject: `Pedido Confirmado #${order.code}`,
+      text,
+      html
     });
 
     if (error) {
@@ -121,311 +172,27 @@ exports.sendRescheduleConfirmation = async (order, date) => {
     return false;
   }
   try {
-    const statusDesc = 'Reenvio Agendado';
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
+    const formattedDate = new Date(date).toLocaleDateString('pt-BR');
+    const title = 'Nova Atualização do Pedido';
+    const message = `Seu pedido teve uma nova atualização de agendamento para o dia <strong>${formattedDate}</strong>. Estamos trabalhando para que chegue o mais rápido possível!`;
+    const html = getEmailTemplate(order, title, message, 2); // 2 = Em trânsito (simulated progress)
+    const text = `Olá ${order.name.split(' ')[0]}, seu pedido foi reagendado para ${formattedDate}. Código: ${order.code}. Acompanhe em: ${getBaseUrl()}/rastreio/${order.code}`;
     
     const { data, error } = await resend.emails.send({
       from: 'Rastreio de Pedido <nao-responda@site-seguro-verificado.fun>',
       to: order.email,
-      subject: `Reagendamento Confirmado #${order.code}`,
-      text: `Olá ${order.name.split(' ')[0]}, seu reagendamento foi confirmado para ${new Date(date).toLocaleDateString('pt-BR')}. Código: ${order.code}. Acompanhe em: ${trackingUrl}`,
-      html: `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Reagendamento Confirmado</title>
-</head>
-<body style="margin:0; padding:0; background-color:#f4f6f9; font-family: Arial, Helvetica, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9; padding:40px 0;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 25px rgba(0,0,0,0.06);">
-          <tr>
-            <td align="center" style="background:#f8f7fb; padding:18px 20px; border-bottom:1px solid #eee;">
-               <img src="https://img.icons8.com/ios-filled/50/6A0DAD/search.png" width="44" height="44" style="display:block;" alt="Logo">
-            </td>
-          </tr>
-          <tr>
-            <td style="background: linear-gradient(135deg, #6A0DAD, #4B0082); padding:26px 28px;">
-              <div style="color:#fff; font-size:26px; font-weight:700; line-height:1.2; text-align:center;">
-                Reagendamento Confirmado
-              </div>
-              <div style="color:rgba(255,255,255,0.85); font-size:13px; text-align:center; margin-top:8px;">
-                Código: <strong style="color:#fff;">${order.code}</strong>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:28px 28px 18px; color:#222;">
-              <div style="font-size:18px; font-weight:700; margin:0 0 8px;">
-                Olá, ${order.name.split(' ')[0]} 👋
-              </div>
-              <div style="font-size:14px; color:#555; line-height:1.6;">
-                O pagamento da taxa de reenvio (€ 5,00) foi confirmado. Seu pedido foi reagendado para o dia <strong>${new Date(date).toLocaleDateString('pt-BR')}</strong>.
-              </div>
-            </td>
-          </tr>
-          <tr>
-             <td style="padding:0 28px;">
-               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 10px; background:#f3f0fa; border-left:6px solid #6A0DAD; border-radius:10px;">
-                 <tr>
-                   <td style="padding:16px 16px;">
-                     <div style="font-size:12px; color:#6b6b6b; margin-bottom:4px;">Status atual</div>
-                     <div style="font-size:22px; font-weight:800; color:#4B0082; margin:0;">
-                       ${statusDesc} 🔄
-                     </div>
-                   </td>
-                 </tr>
-               </table>
-             </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding:0 28px 30px;">
-               <a href="${trackingUrl}" 
-                  style="background: linear-gradient(135deg,#6A0DAD,#4B0082);
-                         color:#ffffff; text-decoration:none; padding:14px 26px;
-                         border-radius:10px; font-size:15px; font-weight:800; display:inline-block; margin-top: 20px;">
-                  Acompanhar Pedido
-               </a>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="background:#fafafa; padding:16px 20px; font-size:12px; color:#999; border-top:1px solid #eee;">
-              Este é um e-mail automático.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-      `
+      subject: `Atualização de Rastreio #${order.code}`,
+      text,
+      html
     });
-
+    
     if (error) {
-      console.error(`Error sending reschedule email to ${order.email}:`, error);
-      return false;
+       console.error(`Error sending reschedule email:`, error);
+       return false;
     }
     return true;
   } catch (error) {
     console.error(`Error sending reschedule email:`, error);
-    return false;
-  }
-};
-
-exports.sendReturnedToStoreNotification = async (order) => {
-  try {
-    const statusDesc = 'Devolvido à Loja';
-    
-    const { data, error } = await resend.emails.send({
-      from: process.env.SMTP_FROM || 'onboarding@resend.dev',
-      to: order.email,
-      subject: `Aviso Importante: Pedido #${order.code} Devolvido`,
-      html: `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pedido Devolvido</title>
-</head>
-<body style="margin:0; padding:0; background-color:#f4f6f9; font-family: Arial, Helvetica, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9; padding:40px 0;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 25px rgba(0,0,0,0.06);">
-          <tr>
-            <td align="center" style="background:#f8f7fb; padding:18px 20px; border-bottom:1px solid #eee;">
-               <img src="https://img.icons8.com/ios-filled/50/6A0DAD/search.png" width="44" height="44" style="display:block;" alt="Logo">
-            </td>
-          </tr>
-          <tr>
-            <td style="background: linear-gradient(135deg, #d63031, #b71540); padding:26px 28px;">
-              <div style="color:#fff; font-size:26px; font-weight:700; line-height:1.2; text-align:center;">
-                Pedido Devolvido
-              </div>
-              <div style="color:rgba(255,255,255,0.85); font-size:13px; text-align:center; margin-top:8px;">
-                Código: <strong style="color:#fff;">${order.code}</strong>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:28px 28px 18px; color:#222;">
-              <div style="font-size:18px; font-weight:700; margin:0 0 8px;">
-                Olá, ${order.name.split(' ')[0]}
-              </div>
-              <div style="font-size:14px; color:#555; line-height:1.6;">
-                Informamos que, após 5 tentativas de reenvio sem sucesso, seu pedido retornou ao nosso centro de distribuição.
-                <br><br>
-                Nossa equipe irá processar o retorno e entrará em contato em breve para definir os próximos passos.
-              </div>
-            </td>
-          </tr>
-          <tr>
-             <td style="padding:0 28px;">
-               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 10px; background:#fff5f5; border-left:6px solid #d63031; border-radius:10px;">
-                 <tr>
-                   <td style="padding:16px 16px;">
-                     <div style="font-size:12px; color:#6b6b6b; margin-bottom:4px;">Status atual</div>
-                     <div style="font-size:22px; font-weight:800; color:#d63031; margin:0;">
-                       ${statusDesc} 🔙
-                     </div>
-                   </td>
-                 </tr>
-               </table>
-             </td>
-          </tr>
-          <tr>
-            <td align="center" style="background:#fafafa; padding:16px 20px; font-size:12px; color:#999; border-top:1px solid #eee;">
-              Este é um e-mail automático.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-      `
-    });
-
-    if (error) {
-      console.error(`Error sending return email to ${order.email}:`, error);
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.error(`Error sending return email:`, error);
-    return false;
-  }
-};
-
-exports.sendStatusUpdateEmail = async (order) => {
-  try {
-    const statusDescriptions = [
-      'Pedido Confirmado',
-      'Em Processamento',
-      'Enviado',
-      'Em Trânsito',
-      'Saiu para Entrega',
-      'Tentativa de Entrega Falhou - Destinatário Ausente',
-      'Reenvio Agendado',
-      'Entregue',
-      'Devolvido à Loja'
-    ];
-    
-    const statusDesc = statusDescriptions[order.status] || 'Atualização de Status';
-    const trackingUrl = `${process.env.BASE_URL}/rastreio/${order.code}`;
-    
-    // Status 5 is specifically "Falha na Entrega" which requires payment
-    let actionButton = '';
-    if (order.status === 5) {
-      actionButton = `
-        <a href="${trackingUrl}" 
-           style="background: linear-gradient(135deg,#d63031,#b71540);
-                  color:#ffffff; text-decoration:none; padding:14px 26px;
-                  border-radius:10px; font-size:15px; font-weight:800; display:inline-block; margin-top: 20px;">
-           Resolver Pendência
-        </a>
-      `;
-    } else {
-      actionButton = `
-        <a href="${trackingUrl}" 
-           style="background: linear-gradient(135deg,#6A0DAD,#4B0082);
-                  color:#ffffff; text-decoration:none; padding:14px 26px;
-                  border-radius:10px; font-size:15px; font-weight:800; display:inline-block; margin-top: 20px;">
-           Acompanhar Pedido
-        </a>
-      `;
-    }
-
-    const { data, error } = await resend.emails.send({
-      from: process.env.SMTP_FROM || 'onboarding@resend.dev',
-      to: order.email,
-      subject: `Atualização de Status #${order.code}: ${statusDesc}`,
-      html: `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Atualização de Status</title>
-</head>
-<body style="margin:0; padding:0; background-color:#f4f6f9; font-family: Arial, Helvetica, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9; padding:40px 0;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 25px rgba(0,0,0,0.06);">
-          <tr>
-            <td align="center" style="background:#f8f7fb; padding:18px 20px; border-bottom:1px solid #eee;">
-               <img src="https://img.icons8.com/ios-filled/50/6A0DAD/search.png" width="44" height="44" style="display:block;" alt="Logo">
-            </td>
-          </tr>
-          <tr>
-            <td style="background: linear-gradient(135deg, ${order.status === 5 ? '#d63031, #b71540' : '#6A0DAD, #4B0082'}); padding:26px 28px;">
-              <div style="color:#fff; font-size:26px; font-weight:700; line-height:1.2; text-align:center;">
-                ${statusDesc}
-              </div>
-              <div style="color:rgba(255,255,255,0.85); font-size:13px; text-align:center; margin-top:8px;">
-                Código: <strong style="color:#fff;">${order.code}</strong>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:28px 28px 18px; color:#222;">
-              <div style="font-size:18px; font-weight:700; margin:0 0 8px;">
-                Olá, ${order.name.split(' ')[0]}
-              </div>
-              <div style="font-size:14px; color:#555; line-height:1.6;">
-                O status do seu pedido foi atualizado.
-                ${order.status === 5 ? '<br><br><strong>Houve uma falha na tentativa de entrega. Por favor, acesse o link abaixo para regularizar a situação e agendar uma nova entrega.</strong>' : ''}
-              </div>
-            </td>
-          </tr>
-          <tr>
-             <td style="padding:0 28px;">
-               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 10px; background:${order.status === 5 ? '#fff5f5' : '#f3f0fa'}; border-left:6px solid ${order.status === 5 ? '#d63031' : '#6A0DAD'}; border-radius:10px;">
-                 <tr>
-                   <td style="padding:16px 16px;">
-                     <div style="font-size:12px; color:#6b6b6b; margin-bottom:4px;">Status atual</div>
-                     <div style="font-size:22px; font-weight:800; color:${order.status === 5 ? '#d63031' : '#4B0082'}; margin:0;">
-                       ${statusDesc}
-                     </div>
-                   </td>
-                 </tr>
-               </table>
-             </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding:0 28px 30px;">
-               ${actionButton}
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="background:#fafafa; padding:16px 20px; font-size:12px; color:#999; border-top:1px solid #eee;">
-              Este é um e-mail automático.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-      `
-    });
-
-    if (error) {
-      console.error(`Error sending status email to ${order.email}:`, error);
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.error(`Error sending status email:`, error);
     return false;
   }
 };
