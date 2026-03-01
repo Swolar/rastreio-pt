@@ -190,6 +190,30 @@ exports.processRedeliveryPayment = async (req, res) => {
   }
 };
 
+// Resend email for an order (Admin action)
+exports.resendEmail = async (req, res) => {
+  try {
+    const { code } = req.params;
+
+    const order = await prisma.order.findUnique({ where: { code } });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Pedido não encontrado' });
+    }
+
+    const sent = await emailService.sendStatusUpdateEmail(order);
+
+    if (sent) {
+      res.json({ message: 'Email reenviado com sucesso' });
+    } else {
+      res.status(500).json({ error: 'Falha ao enviar email. Verifique a configuração do Resend.' });
+    }
+  } catch (error) {
+    console.error('Error resending email:', error);
+    res.status(500).json({ error: 'Erro ao reenviar email', details: error.message });
+  }
+};
+
 // Admin list orders (Simple JSON API for now)
 exports.listOrders = async (req, res) => {
   try {

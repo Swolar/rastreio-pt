@@ -568,6 +568,42 @@
       background: var(--claude-accent-light);
     }
 
+    .actions-cell {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-resend {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--claude-info);
+      background: none;
+      border: none;
+      font-family: var(--admin-font);
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-resend:hover {
+      background: var(--claude-info-bg);
+    }
+
+    .btn-resend:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-resend.sent {
+      color: var(--claude-success);
+    }
+
     /* ========================================
        EMPTY STATE
     ======================================== */
@@ -1261,9 +1297,14 @@
             '<i class="fas ' + config.icon + '"></i> ' + config.label +
           '</span></td>' +
           '<td class="date-cell">' + formattedDate + '<br>' + formattedTime + '</td>' +
-          '<td><a href="/rastreio/' + order.code + '" target="_blank" class="action-link">' +
-            '<i class="fas fa-external-link-alt"></i> Ver' +
-          '</a></td>';
+          '<td><div class="actions-cell">' +
+            '<a href="/rastreio/' + order.code + '" target="_blank" class="action-link">' +
+              '<i class="fas fa-external-link-alt"></i> Ver' +
+            '</a>' +
+            '<button class="btn-resend" onclick="resendEmail(this, \'' + order.code + '\')" title="Reenviar email ao cliente">' +
+              '<i class="fas fa-envelope"></i> Email' +
+            '</button>' +
+          '</div></td>';
 
         ordersBody.appendChild(row);
       });
@@ -1273,6 +1314,44 @@
       var div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    // ===========================
+    // RESEND EMAIL
+    // ===========================
+    async function resendEmail(btn, code) {
+      if (btn.disabled) return;
+
+      btn.disabled = true;
+      var originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+      try {
+        var response = await fetch('/api/orders/' + code + '/resend-email', {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          btn.classList.add('sent');
+          btn.innerHTML = '<i class="fas fa-check"></i> Enviado';
+          showToast('Email reenviado com sucesso para o pedido ' + code, 'success');
+          setTimeout(function() {
+            btn.disabled = false;
+            btn.classList.remove('sent');
+            btn.innerHTML = originalHtml;
+          }, 3000);
+        } else {
+          var err = await response.json();
+          showToast('Erro ao reenviar email: ' + (err.error || 'Erro desconhecido'), 'error');
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      } catch (error) {
+        console.error('Erro ao reenviar email:', error);
+        showToast('Erro ao reenviar email. Tente novamente.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
     }
 
     // ===========================

@@ -35,5 +35,6 @@ router.post('/api/reenvio/webhook', resendController.webhook);
 // API Endpoints
 router.post('/api/orders', orderController.createOrder);
 router.get('/api/orders', orderController.listOrders);
+router.post('/api/orders/:code/resend-email', orderController.resendEmail);
 
 module.exports = router;
