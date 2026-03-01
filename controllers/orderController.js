@@ -180,6 +180,9 @@ exports.processRedeliveryPayment = async (req, res) => {
       }
     });
 
+    // Send confirmation email
+    await emailService.sendRescheduleConfirmation(updatedOrder, redeliveryDate);
+
     res.redirect(`/rastreio/${code}`);
   } catch (error) {
     console.error('Error processing payment:', error);

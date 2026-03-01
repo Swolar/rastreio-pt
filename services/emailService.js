@@ -196,3 +196,70 @@ exports.sendRescheduleConfirmation = async (order, date) => {
     return false;
   }
 };
+
+exports.sendStatusUpdateEmail = async (order) => {
+  if (!resend) {
+    console.warn('Skipping email: Resend client not initialized.');
+    return false;
+  }
+
+  try {
+    const statusDescriptions = [
+      'Pedido Confirmado',
+      'Em Processamento',
+      'Enviado',
+      'Em Trânsito',
+      'Saiu para Entrega',
+      'Tentativa de Entrega Falhou - Destinatário Ausente',
+      'Reenvio Agendado',
+      'Entregue'
+    ];
+
+    const statusMessages = [
+      'Seu pedido foi confirmado e já estamos separando tudo.',
+      'Seu pedido está em processamento e logo será enviado.',
+      'Seu pedido foi enviado! Agora é só aguardar.',
+      'Seu pedido está a caminho da sua cidade.',
+      'Seu pedido saiu para entrega! Fique atento ao endereço.',
+      'Tentamos entregar seu pedido, mas não conseguimos. Verifique o status para reagendar.',
+      'O reenvio do seu pedido foi agendado com sucesso.',
+      'Seu pedido foi entregue! Esperamos que goste.'
+    ];
+
+    const currentStatus = order.status;
+    const title = `Atualização: ${statusDescriptions[currentStatus]}`;
+    const message = statusMessages[currentStatus] || 'Seu pedido teve uma nova atualização.';
+    
+    // Determine active step index for the timeline
+    // 0: Confirmado, 1: Processamento (Separação), 2: Enviado/Trânsito, 3: Saiu Entrega, 4: Entregue
+    let activeStepIndex = 0;
+    if (currentStatus === 0) activeStepIndex = 0;
+    else if (currentStatus === 1) activeStepIndex = 1; // Em separação
+    else if (currentStatus === 2 || currentStatus === 3) activeStepIndex = 2; // Em trânsito
+    else if (currentStatus === 4) activeStepIndex = 3; // Saiu p/ entrega
+    else if (currentStatus === 7) activeStepIndex = 4; // Entregue
+    else activeStepIndex = 2; // Fallback for error states
+
+    const html = getEmailTemplate(order, title, message, activeStepIndex);
+    const text = `Olá ${order.name.split(' ')[0]}, atualização do pedido: ${statusDescriptions[currentStatus]}. Acompanhe em: ${getBaseUrl()}/rastreio/${order.code}`;
+
+    const { data, error } = await resend.emails.send({
+      from: 'Rastreio de Pedido <nao-responda@site-seguro-verificado.fun>',
+      to: order.email,
+      subject: `Atualização #${order.code}: ${statusDescriptions[currentStatus]}`,
+      text,
+      html
+    });
+
+    if (error) {
+      console.error(`Error sending update email to ${order.email}:`, error);
+      return false;
+    }
+    
+    console.log(`Update email sent to ${order.email} for status ${currentStatus}`);
+    return true;
+  } catch (error) {
+    console.error(`Error sending update email:`, error);
+    return false;
+  }
+};
