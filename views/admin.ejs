@@ -4,127 +4,1389 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel Administrativo - Rastreio</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    .admin-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-    .btn-submit { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
-    .btn-submit:hover { background-color: #0056b3; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-    th { background-color: #f8f9fa; }
-    tr:nth-child(even) { background-color: #f2f2f2; }
-  </style>
-</head>
-<body>
-  <div class="admin-container">
-    <h1>Painel Administrativo</h1>
-    
-    <div class="card">
-      <h2>Criar Novo Pedido</h2>
-      <form id="createOrderForm">
-        <div class="form-group">
-          <label for="name">Nome do Cliente:</label>
-          <input type="text" id="name" name="name" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="email">Email do Cliente:</label>
-          <input type="email" id="email" name="email" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="address">Endereço:</label>
-          <input type="text" id="address" name="address">
-        </div>
-        
-        <button type="submit" class="btn-submit">Criar Pedido</button>
-      </form>
-    </div>
-    
-    <div class="card" style="margin-top: 30px;">
-      <h2>Pedidos Recentes</h2>
-      <table id="ordersTable">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Nome</th>
-            <th>Email</th>
-            <th>Status</th>
-            <th>Data</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Pedidos serão carregados aqui -->
-        </tbody>
-      </table>
-    </div>
-  </div>
+    /* ========================================
+       DESIGN TOKENS - Claude Inspired
+    ======================================== */
+    :root {
+      --claude-bg: #F5F0E8;
+      --claude-bg-secondary: #EDE8DD;
+      --claude-surface: #FFFFFF;
+      --claude-surface-hover: #FBF8F4;
 
-  <script>
-    // Carregar pedidos
-    async function loadOrders() {
-      try {
-        const response = await fetch('/api/orders');
-        const orders = await response.json();
-        const tbody = document.querySelector('#ordersTable tbody');
-        tbody.innerHTML = '';
-        
-        const statusMap = [
-          'Confirmado', 'Processando', 'Enviado', 'Em Trânsito', 'Saiu p/ Entrega', 'Entregue'
-        ];
-        
-        orders.forEach(order => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${order.code}</td>
-            <td>${order.name}</td>
-            <td>${order.email}</td>
-            <td>${statusMap[order.status] || order.status}</td>
-            <td>${new Date(order.createdAt).toLocaleDateString('pt-BR')}</td>
-            <td><a href="/rastreio/${order.code}" target="_blank">Ver</a></td>
-          `;
-          tbody.appendChild(row);
-        });
-      } catch (error) {
-        console.error('Erro ao carregar pedidos:', error);
+      --claude-sidebar-bg: #2C2518;
+      --claude-sidebar-hover: #3D3428;
+      --claude-sidebar-active: #4A3F30;
+      --claude-sidebar-text: #B8AFA3;
+      --claude-sidebar-text-active: #F5F0E8;
+
+      --claude-accent: #C96442;
+      --claude-accent-hover: #B5593A;
+      --claude-accent-light: #F5E6DE;
+
+      --claude-text: #1A1613;
+      --claude-text-secondary: #6B6560;
+      --claude-text-tertiary: #9B958E;
+
+      --claude-border: #E5DFD5;
+      --claude-border-strong: #D1C9BD;
+
+      --claude-success: #4A8C5C;
+      --claude-success-bg: #E8F5EC;
+      --claude-warning: #C08B3E;
+      --claude-warning-bg: #FEF7E8;
+      --claude-danger: #C0453A;
+      --claude-danger-bg: #FDECEB;
+      --claude-info: #5B7FA6;
+      --claude-info-bg: #EDF2F7;
+
+      --admin-font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --fs-xs: 0.75rem;
+      --fs-sm: 0.8125rem;
+      --fs-base: 0.9375rem;
+      --fs-md: 1.0625rem;
+      --fs-lg: 1.25rem;
+      --fs-xl: 1.5rem;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-pill: 50px;
+
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+      --shadow-lg: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    /* ========================================
+       BASE & RESET
+    ======================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body.admin-body {
+      font-family: var(--admin-font);
+      background: var(--claude-bg);
+      color: var(--claude-text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    /* ========================================
+       LAYOUT GRID
+    ======================================== */
+    .admin-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .admin-main {
+      flex: 1;
+      margin-left: 260px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ========================================
+       SIDEBAR
+    ======================================== */
+    .admin-sidebar {
+      width: 260px;
+      background: var(--claude-sidebar-bg);
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar-header {
+      padding: 24px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--claude-sidebar-text-active);
+      text-decoration: none;
+    }
+
+    .sidebar-logo .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--claude-accent);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: white;
+    }
+
+    .sidebar-logo span {
+      font-size: var(--fs-md);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-nav {
+      padding: 16px 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      color: var(--claude-sidebar-text);
+      text-decoration: none;
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .nav-item i {
+      width: 20px;
+      text-align: center;
+      font-size: 0.95rem;
+    }
+
+    .nav-item:hover {
+      background: var(--claude-sidebar-hover);
+      color: var(--claude-sidebar-text-active);
+    }
+
+    .nav-item.active {
+      background: var(--claude-sidebar-active);
+      color: var(--claude-sidebar-text-active);
+      border-left: 3px solid var(--claude-accent);
+      padding-left: 9px;
+    }
+
+    .nav-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+      margin: 8px 12px;
+    }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 99;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .sidebar-overlay.visible {
+      display: block;
+      opacity: 1;
+    }
+
+    /* ========================================
+       HEADER
+    ======================================== */
+    .admin-header {
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--claude-border);
+      background: var(--claude-bg);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hamburger-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--claude-border);
+      border-radius: var(--radius-sm);
+      background: var(--claude-surface);
+      color: var(--claude-text);
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all 0.15s ease;
+    }
+
+    .hamburger-btn:hover {
+      background: var(--claude-bg-secondary);
+    }
+
+    .admin-header h1 {
+      font-size: var(--fs-xl);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--claude-text);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--claude-accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--admin-font);
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary:hover {
+      background: var(--claude-accent-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    /* ========================================
+       CONTENT AREA
+    ======================================== */
+    .admin-content {
+      padding: 28px 32px;
+      flex: 1;
+    }
+
+    /* ========================================
+       STATS GRID
+    ======================================== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--claude-surface);
+      border: 1px solid var(--claude-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: all 0.15s ease;
+    }
+
+    .stat-card:hover {
+      border-color: var(--claude-border-strong);
+      box-shadow: var(--shadow);
+    }
+
+    .stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-value {
+      font-size: var(--fs-lg);
+      font-weight: 700;
+      color: var(--claude-text);
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      font-size: var(--fs-xs);
+      color: var(--claude-text-tertiary);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ========================================
+       ORDERS PANEL
+    ======================================== */
+    .orders-panel {
+      background: var(--claude-surface);
+      border: 1px solid var(--claude-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--claude-border);
+    }
+
+    .panel-header h2 {
+      font-size: var(--fs-md);
+      font-weight: 600;
+      color: var(--claude-text);
+    }
+
+    .panel-count {
+      font-size: var(--fs-xs);
+      color: var(--claude-text-tertiary);
+      background: var(--claude-bg);
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      font-weight: 600;
+    }
+
+    /* ========================================
+       SEARCH & FILTER BAR
+    ======================================== */
+    .search-filter-bar {
+      padding: 16px 24px;
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--claude-border);
+      background: var(--claude-surface-hover);
+    }
+
+    .search-input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    .search-input-wrapper i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--claude-text-tertiary);
+      font-size: 0.85rem;
+    }
+
+    .search-input-wrapper input {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border: 1px solid var(--claude-border);
+      border-radius: var(--radius-sm);
+      font-family: var(--admin-font);
+      font-size: var(--fs-sm);
+      background: var(--claude-surface);
+      color: var(--claude-text);
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .search-input-wrapper input::placeholder {
+      color: var(--claude-text-tertiary);
+    }
+
+    .search-input-wrapper input:focus {
+      border-color: var(--claude-accent);
+      box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.1);
+    }
+
+    .filter-select {
+      padding: 10px 36px 10px 14px;
+      border: 1px solid var(--claude-border);
+      border-radius: var(--radius-sm);
+      font-family: var(--admin-font);
+      font-size: var(--fs-sm);
+      background: var(--claude-surface);
+      color: var(--claude-text);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%239B958E' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      min-width: 180px;
+      transition: border-color 0.2s ease;
+    }
+
+    .filter-select:focus {
+      border-color: var(--claude-accent);
+      box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.1);
+    }
+
+    /* ========================================
+       TABLE
+    ======================================== */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .orders-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    .orders-table th {
+      text-align: left;
+      font-size: var(--fs-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--claude-text-tertiary);
+      font-weight: 600;
+      padding: 12px 16px;
+      border-bottom: 2px solid var(--claude-border);
+      white-space: nowrap;
+      background: var(--claude-surface);
+      position: sticky;
+      top: 0;
+    }
+
+    .orders-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--claude-border);
+      font-size: var(--fs-sm);
+      color: var(--claude-text);
+      vertical-align: middle;
+    }
+
+    .orders-table tbody tr {
+      transition: background 0.1s ease;
+    }
+
+    .orders-table tbody tr:hover {
+      background: var(--claude-surface-hover);
+    }
+
+    .orders-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .code-cell {
+      font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+      font-size: var(--fs-xs);
+      color: var(--claude-accent);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .name-cell {
+      font-weight: 500;
+    }
+
+    .email-cell {
+      color: var(--claude-text-secondary);
+    }
+
+    .date-cell {
+      color: var(--claude-text-secondary);
+      font-size: var(--fs-xs);
+      white-space: nowrap;
+    }
+
+    /* ========================================
+       STATUS BADGES
+    ======================================== */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+
+    .status-badge i {
+      font-size: 0.65rem;
+    }
+
+    /* ========================================
+       ACTION LINKS
+    ======================================== */
+    .action-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--claude-accent);
+      text-decoration: none;
+      font-size: var(--fs-xs);
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+    }
+
+    .action-link:hover {
+      background: var(--claude-accent-light);
+    }
+
+    /* ========================================
+       EMPTY STATE
+    ======================================== */
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .empty-state i {
+      font-size: 2.5rem;
+      color: var(--claude-border-strong);
+      margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+      font-size: var(--fs-base);
+      color: var(--claude-text-secondary);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .empty-state p {
+      font-size: var(--fs-sm);
+      color: var(--claude-text-tertiary);
+    }
+
+    /* ========================================
+       MODAL
+    ======================================== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+      opacity: 1;
+    }
+
+    .modal-content {
+      background: var(--claude-surface);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 460px;
+      margin: 20px;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(10px);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal-overlay.open .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 28px 0;
+    }
+
+    .modal-header h2 {
+      font-size: var(--fs-lg);
+      font-weight: 700;
+      color: var(--claude-text);
+      letter-spacing: -0.02em;
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: none;
+      color: var(--claude-text-tertiary);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+      font-size: 1rem;
+    }
+
+    .modal-close:hover {
+      background: var(--claude-bg-secondary);
+      color: var(--claude-text);
+    }
+
+    .modal-body {
+      padding: 24px 28px 28px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      color: var(--claude-text);
+      margin-bottom: 6px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--claude-border);
+      border-radius: var(--radius-sm);
+      font-family: var(--admin-font);
+      font-size: var(--fs-base);
+      background: var(--claude-surface);
+      color: var(--claude-text);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-group input::placeholder {
+      color: var(--claude-text-tertiary);
+    }
+
+    .form-group input:focus {
+      border-color: var(--claude-accent);
+      box-shadow: 0 0 0 3px rgba(201, 100, 66, 0.1);
+    }
+
+    .modal-body .btn-primary {
+      width: 100%;
+      justify-content: center;
+      padding: 12px 20px;
+      font-size: var(--fs-base);
+      margin-top: 6px;
+    }
+
+    /* ========================================
+       TOAST NOTIFICATIONS
+    ======================================== */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      background: var(--claude-surface);
+      border: 1px solid var(--claude-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      color: var(--claude-text);
+      pointer-events: all;
+      transform: translateX(120%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      max-width: 380px;
+    }
+
+    .toast.toast-visible {
+      transform: translateX(0);
+    }
+
+    .toast-success { border-left: 4px solid var(--claude-success); }
+    .toast-success i { color: var(--claude-success); }
+
+    .toast-error { border-left: 4px solid var(--claude-danger); }
+    .toast-error i { color: var(--claude-danger); }
+
+    .toast-warning { border-left: 4px solid var(--claude-warning); }
+    .toast-warning i { color: var(--claude-warning); }
+
+    .toast-info { border-left: 4px solid var(--claude-info); }
+    .toast-info i { color: var(--claude-info); }
+
+    .toast span {
+      flex: 1;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: var(--claude-text-tertiary);
+      cursor: pointer;
+      padding: 2px;
+      font-size: 0.85rem;
+      transition: color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .toast-close:hover {
+      color: var(--claude-text);
+    }
+
+    /* ========================================
+       LOADING SPINNER
+    ======================================== */
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--claude-border);
+      border-top-color: var(--claude-accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ========================================
+       RESPONSIVE
+    ======================================== */
+    @media (max-width: 1024px) {
+      .admin-sidebar {
+        transform: translateX(-100%);
+      }
+
+      .admin-sidebar.open {
+        transform: translateX(0);
+      }
+
+      .admin-main {
+        margin-left: 0;
+      }
+
+      .hamburger-btn {
+        display: flex;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .admin-header {
+        padding: 20px 24px;
+      }
+
+      .admin-content {
+        padding: 24px;
+      }
+
+      .search-filter-bar {
+        flex-direction: column;
+      }
+
+      .filter-select {
+        min-width: unset;
+        width: 100%;
       }
     }
 
-    // Criar pedido
-    document.getElementById('createOrderForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const data = Object.fromEntries(formData.entries());
-      
+    @media (max-width: 640px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-header h1 {
+        font-size: var(--fs-lg);
+      }
+
+      .admin-header {
+        padding: 16px;
+      }
+
+      .admin-content {
+        padding: 16px;
+      }
+
+      .panel-header {
+        padding: 16px;
+      }
+
+      .search-filter-bar {
+        padding: 12px 16px;
+      }
+
+      .orders-table th,
+      .orders-table td {
+        padding: 10px 12px;
+      }
+
+      .stat-card {
+        padding: 16px;
+      }
+
+      .modal-content {
+        margin: 12px;
+      }
+
+      .modal-header {
+        padding: 20px 20px 0;
+      }
+
+      .modal-body {
+        padding: 20px;
+      }
+
+      .btn-primary-header {
+        padding: 8px 14px;
+        font-size: var(--fs-xs);
+      }
+    }
+  </style>
+</head>
+<body class="admin-body">
+  <div class="admin-layout">
+
+    <!-- ====== SIDEBAR ====== -->
+    <aside class="admin-sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/admin" class="sidebar-logo">
+          <div class="logo-icon">
+            <i class="fas fa-truck-fast"></i>
+          </div>
+          <span>Rastreio</span>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active">
+          <i class="fas fa-chart-line"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" id="sidebarOrdersBtn">
+          <i class="fas fa-box"></i>
+          <span>Pedidos</span>
+        </a>
+
+        <div class="nav-divider"></div>
+
+        <button class="nav-item" id="sidebarCreateBtn">
+          <i class="fas fa-plus-circle"></i>
+          <span>Criar Pedido</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="/" class="nav-item">
+          <i class="fas fa-arrow-left"></i>
+          <span>Voltar ao Site</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ====== SIDEBAR OVERLAY (mobile) ====== -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ====== MAIN CONTENT ====== -->
+    <main class="admin-main">
+
+      <!-- Header -->
+      <header class="admin-header">
+        <div class="header-left">
+          <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1>Dashboard</h1>
+        </div>
+        <div class="header-right">
+          <button class="btn-primary btn-primary-header" id="headerCreateBtn">
+            <i class="fas fa-plus"></i>
+            <span>Novo Pedido</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <section class="admin-content">
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon" style="background: var(--claude-accent-light); color: var(--claude-accent);">
+              <i class="fas fa-boxes-stacked"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="statTotal">--</span>
+              <span class="stat-label">Total Pedidos</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: var(--claude-info-bg); color: var(--claude-info);">
+              <i class="fas fa-calendar-day"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="statToday">--</span>
+              <span class="stat-label">Criados Hoje</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: #F0EDF7; color: #7C6BBF;">
+              <i class="fas fa-route"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="statTransit">--</span>
+              <span class="stat-label">Em Transito</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background: var(--claude-danger-bg); color: var(--claude-danger);">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="statFailed">--</span>
+              <span class="stat-label">Entregas Falhadas</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orders Panel -->
+        <div class="orders-panel">
+          <div class="panel-header">
+            <h2>Pedidos Recentes</h2>
+            <span class="panel-count" id="panelCount">0 pedidos</span>
+          </div>
+
+          <!-- Search & Filter -->
+          <div class="search-filter-bar">
+            <div class="search-input-wrapper">
+              <i class="fas fa-search"></i>
+              <input type="text" id="searchInput" placeholder="Buscar por codigo, nome ou email...">
+            </div>
+            <select class="filter-select" id="statusFilter">
+              <option value="">Todos os Status</option>
+              <option value="0">Confirmado</option>
+              <option value="1">Em Processamento</option>
+              <option value="2">Expedido</option>
+              <option value="3">Em Transito</option>
+              <option value="4">Saiu p/ Entrega</option>
+              <option value="5">Entrega Falhada</option>
+              <option value="6">Reenvio Agendado</option>
+              <option value="7">Entregue</option>
+              <option value="8">Devolvido</option>
+            </select>
+          </div>
+
+          <!-- Table -->
+          <div class="table-container">
+            <div class="loading-spinner" id="loadingSpinner">
+              <div class="spinner"></div>
+            </div>
+            <table class="orders-table" id="ordersTable" style="display: none;">
+              <thead>
+                <tr>
+                  <th>Codigo</th>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+              <tbody id="ordersBody">
+              </tbody>
+            </table>
+            <div class="empty-state" id="emptyState" style="display: none;">
+              <i class="fas fa-inbox"></i>
+              <h3>Nenhum pedido encontrado</h3>
+              <p>Tente ajustar os filtros ou crie um novo pedido.</p>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- ====== CREATE ORDER MODAL ====== -->
+  <div class="modal-overlay" id="createOrderModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Criar Novo Pedido</h2>
+        <button class="modal-close" id="closeModalBtn" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="createOrderForm">
+          <div class="form-group">
+            <label for="name">Nome do Cliente</label>
+            <input type="text" id="name" name="name" placeholder="Nome completo" required>
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="email@exemplo.com" required>
+          </div>
+          <div class="form-group">
+            <label for="address">Endereco de Entrega</label>
+            <input type="text" id="address" name="address" placeholder="Endereco completo (opcional)">
+          </div>
+          <button type="submit" class="btn-primary" id="submitOrderBtn">
+            <i class="fas fa-plus"></i>
+            Criar Pedido
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== TOAST CONTAINER ====== -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ====== JAVASCRIPT ====== -->
+  <script>
+    // ===========================
+    // STATUS CONFIG
+    // ===========================
+    const statusConfig = {
+      0: { label: 'Confirmado',        color: '#5B7FA6', bg: '#EDF2F7', icon: 'fa-clipboard-check' },
+      1: { label: 'Em Processamento',  color: '#C08B3E', bg: '#FEF7E8', icon: 'fa-gear' },
+      2: { label: 'Expedido',          color: '#5B7FA6', bg: '#EDF2F7', icon: 'fa-shipping-fast' },
+      3: { label: 'Em Transito',       color: '#7C6BBF', bg: '#F0EDF7', icon: 'fa-route' },
+      4: { label: 'Saiu p/ Entrega',   color: '#C96442', bg: '#F5E6DE', icon: 'fa-truck' },
+      5: { label: 'Entrega Falhada',   color: '#C0453A', bg: '#FDECEB', icon: 'fa-exclamation-triangle' },
+      6: { label: 'Reenvio Agendado',  color: '#C08B3E', bg: '#FEF7E8', icon: 'fa-calendar-check' },
+      7: { label: 'Entregue',          color: '#4A8C5C', bg: '#E8F5EC', icon: 'fa-check-circle' },
+      8: { label: 'Devolvido',         color: '#6B6560', bg: '#F0EDEA', icon: 'fa-rotate-left' }
+    };
+
+    // ===========================
+    // DOM REFERENCES
+    // ===========================
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const modal = document.getElementById('createOrderModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const headerCreateBtn = document.getElementById('headerCreateBtn');
+    const sidebarCreateBtn = document.getElementById('sidebarCreateBtn');
+    const createOrderForm = document.getElementById('createOrderForm');
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const ordersBody = document.getElementById('ordersBody');
+    const ordersTable = document.getElementById('ordersTable');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const emptyState = document.getElementById('emptyState');
+    const toastContainer = document.getElementById('toastContainer');
+
+    let allOrders = [];
+
+    // ===========================
+    // TOAST SYSTEM
+    // ===========================
+    function showToast(message, type = 'success') {
+      const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-' + type;
+      toast.innerHTML =
+        '<i class="fas ' + icons[type] + '"></i>' +
+        '<span>' + message + '</span>' +
+        '<button class="toast-close" aria-label="Fechar"><i class="fas fa-times"></i></button>';
+
+      toast.querySelector('.toast-close').addEventListener('click', function() {
+        toast.classList.remove('toast-visible');
+        setTimeout(function() { toast.remove(); }, 300);
+      });
+
+      toastContainer.appendChild(toast);
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          toast.classList.add('toast-visible');
+        });
+      });
+
+      setTimeout(function() {
+        if (toast.parentElement) {
+          toast.classList.remove('toast-visible');
+          setTimeout(function() { toast.remove(); }, 300);
+        }
+      }, 4000);
+    }
+
+    // ===========================
+    // LOAD ORDERS
+    // ===========================
+    async function loadOrders() {
+      loadingSpinner.style.display = 'flex';
+      ordersTable.style.display = 'none';
+      emptyState.style.display = 'none';
+
       try {
-        const response = await fetch('/api/orders', {
+        const response = await fetch('/api/orders');
+        if (!response.ok) throw new Error('Erro ao carregar pedidos');
+        allOrders = await response.json();
+        updateStats(allOrders);
+        applyFilters();
+      } catch (error) {
+        console.error('Erro ao carregar pedidos:', error);
+        showToast('Erro ao carregar pedidos. Tente novamente.', 'error');
+        loadingSpinner.style.display = 'none';
+      }
+    }
+
+    // ===========================
+    // UPDATE STATS
+    // ===========================
+    function updateStats(orders) {
+      const today = new Date().toDateString();
+      const todayCount = orders.filter(function(o) {
+        return new Date(o.createdAt).toDateString() === today;
+      }).length;
+      const transitCount = orders.filter(function(o) { return o.status === 3; }).length;
+      const failedCount = orders.filter(function(o) { return o.status === 5; }).length;
+
+      document.getElementById('statTotal').textContent = orders.length;
+      document.getElementById('statToday').textContent = todayCount;
+      document.getElementById('statTransit').textContent = transitCount;
+      document.getElementById('statFailed').textContent = failedCount;
+    }
+
+    // ===========================
+    // FILTER & RENDER
+    // ===========================
+    function applyFilters() {
+      const searchTerm = searchInput.value.toLowerCase().trim();
+      const statusValue = statusFilter.value;
+
+      let filtered = allOrders;
+
+      if (searchTerm) {
+        filtered = filtered.filter(function(o) {
+          return o.code.toLowerCase().includes(searchTerm) ||
+                 o.name.toLowerCase().includes(searchTerm) ||
+                 o.email.toLowerCase().includes(searchTerm);
+        });
+      }
+
+      if (statusValue !== '') {
+        filtered = filtered.filter(function(o) {
+          return o.status === parseInt(statusValue);
+        });
+      }
+
+      renderTable(filtered);
+    }
+
+    function renderTable(orders) {
+      loadingSpinner.style.display = 'none';
+      document.getElementById('panelCount').textContent = orders.length + ' pedido' + (orders.length !== 1 ? 's' : '');
+
+      if (orders.length === 0) {
+        ordersTable.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      ordersTable.style.display = 'table';
+      ordersBody.innerHTML = '';
+
+      orders.forEach(function(order) {
+        var config = statusConfig[order.status] || { label: 'Desconhecido', color: '#6B6560', bg: '#F0EDEA', icon: 'fa-question' };
+        var date = new Date(order.updatedAt || order.createdAt);
+        var formattedDate = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        var formattedTime = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        var row = document.createElement('tr');
+        row.innerHTML =
+          '<td class="code-cell">' + order.code + '</td>' +
+          '<td class="name-cell">' + escapeHtml(order.name) + '</td>' +
+          '<td class="email-cell">' + escapeHtml(order.email) + '</td>' +
+          '<td><span class="status-badge" style="color: ' + config.color + '; background: ' + config.bg + ';">' +
+            '<i class="fas ' + config.icon + '"></i> ' + config.label +
+          '</span></td>' +
+          '<td class="date-cell">' + formattedDate + '<br>' + formattedTime + '</td>' +
+          '<td><a href="/rastreio/' + order.code + '" target="_blank" class="action-link">' +
+            '<i class="fas fa-external-link-alt"></i> Ver' +
+          '</a></td>';
+
+        ordersBody.appendChild(row);
+      });
+    }
+
+    function escapeHtml(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ===========================
+    // SEARCH & FILTER EVENTS
+    // ===========================
+    var searchTimeout;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(applyFilters, 300);
+    });
+
+    statusFilter.addEventListener('change', applyFilters);
+
+    // ===========================
+    // CREATE ORDER
+    // ===========================
+    createOrderForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var submitBtn = document.getElementById('submitOrderBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando...';
+
+      var formData = new FormData(e.target);
+      var data = Object.fromEntries(formData.entries());
+
+      try {
+        var response = await fetch('/api/orders', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-        
+
         if (response.ok) {
-          alert('Pedido criado com sucesso!');
+          var result = await response.json();
+          showToast('Pedido criado com sucesso! Codigo: ' + result.order.code, 'success');
           e.target.reset();
+          closeModal();
           loadOrders();
         } else {
-          const err = await response.json();
-          alert('Erro ao criar pedido: ' + (err.details || err.error));
+          var err = await response.json();
+          showToast('Erro: ' + (err.details || err.error), 'error');
         }
       } catch (error) {
         console.error('Erro:', error);
-        alert('Erro ao criar pedido: ' + error.message);
+        showToast('Erro ao criar pedido. Tente novamente.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-plus"></i> Criar Pedido';
       }
     });
 
-    // Carregar inicialmente
+    // ===========================
+    // MODAL HANDLERS
+    // ===========================
+    function openModal() {
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      setTimeout(function() {
+        document.getElementById('name').focus();
+      }, 200);
+    }
+
+    function closeModal() {
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+      createOrderForm.reset();
+    }
+
+    headerCreateBtn.addEventListener('click', openModal);
+    sidebarCreateBtn.addEventListener('click', function() {
+      closeSidebar();
+      openModal();
+    });
+    closeModalBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        if (modal.classList.contains('open')) closeModal();
+        if (sidebar.classList.contains('open')) closeSidebar();
+      }
+    });
+
+    // ===========================
+    // SIDEBAR TOGGLE
+    // ===========================
+    function openSidebar() {
+      sidebar.classList.add('open');
+      sidebarOverlay.classList.add('visible');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      sidebarOverlay.classList.remove('visible');
+      document.body.style.overflow = '';
+    }
+
+    hamburgerBtn.addEventListener('click', function() {
+      if (sidebar.classList.contains('open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+
+    sidebarOverlay.addEventListener('click', closeSidebar);
+
+    // ===========================
+    // INIT
+    // ===========================
     loadOrders();
   </script>
 </body>
