@@ -5,47 +5,62 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pedido Devolvido - <%= order.code %></title>
   <link rel="stylesheet" href="/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <div class="main-container">
-    
-    <div class="card">
-      <div class="card-header">
-        <div class="header-title">
-          <div class="icon-box" style="background-color: #ffe3e3; color: var(--danger-color);">
-            <i class="fas fa-undo"></i>
+  <div class="page-wrap">
+    <%- include('partials/header') %>
+
+    <main class="main-container">
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb">
+        <a href="/">Inicio</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <a href="/rastreio/<%= order.code %>">Rastreio</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <span class="current">Pedido Devolvido</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="header-title">
+            <div class="icon-box icon-box--danger">
+              <i class="fas fa-undo"></i>
+            </div>
+            <h1>Pedido Devolvido</h1>
           </div>
-          <h1>Pedido Devolvido</h1>
+          <div class="order-badge order-badge--danger">
+            <%= order.code %>
+          </div>
         </div>
-        <div class="order-badge" style="background: #fee; color: #d63031;">
-          <%= order.code %>
+
+        <div class="alert-card danger">
+          <div class="alert-icon">
+            <i class="fas fa-box-open"></i>
+          </div>
+          <div class="alert-content">
+            <h3>Limite de tentativas excedido</h3>
+            <p>
+              Infelizmente, atingimos o limite maximo de 5 tentativas de reagendamento para este pedido.
+            </p>
+            <p>
+              <strong>O pedido retornou a loja.</strong> Nossa equipe ira processar um novo envio com outra transportadora e entrara em contato em breve.
+            </p>
+          </div>
+        </div>
+
+        <div class="footer-actions">
+          <a href="/rastreio/<%= order.code %>" class="btn-link">
+            <i class="fas fa-arrow-left"></i> Voltar ao Rastreio
+          </a>
         </div>
       </div>
 
-      <div class="alert-card danger" style="margin-bottom: 30px; border-left: 4px solid #d63031; background: #fff5f5; padding: 20px;">
-        <div class="alert-icon" style="color: #d63031;">
-          <i class="fas fa-box-open" style="font-size: 24px;"></i>
-        </div>
-        <div class="alert-content">
-          <h3 style="color: #d63031; margin-bottom: 8px;">Limite de tentativas excedido</h3>
-          <p style="color: #444; line-height: 1.5;">
-            Infelizmente, atingimos o limite máximo de 5 tentativas de reagendamento para este pedido.
-          </p>
-          <p style="color: #444; line-height: 1.5; margin-top: 10px;">
-            <strong>O pedido retornou à loja.</strong> Nossa equipe irá processar um novo envio com outra transportadora e entrará em contato em breve.
-          </p>
-        </div>
-      </div>
+    </main>
 
-      <div class="footer-actions">
-        <a href="/rastreio/<%= order.code %>" class="btn-link">
-          <i class="fas fa-arrow-left"></i> Voltar ao Rastreio
-        </a>
-      </div>
-    </div>
-
+    <%- include('partials/footer') %>
   </div>
 </body>
 </html>

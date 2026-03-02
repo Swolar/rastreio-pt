@@ -5,327 +5,288 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pagamento de Reenvio - <%= order.code %></title>
   <link rel="stylesheet" href="/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link rel="stylesheet" href="https://npmcdn.com/flatpickr/dist/themes/material_blue.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
-  <style>
-    .date-input-wrapper {
-      position: relative;
-      transition: all 0.3s ease;
-      border: 2px solid #eee;
-      border-radius: 12px;
-      padding: 5px;
-      display: flex;
-      align-items: center;
-      background: #fff;
-    }
-    .date-input-wrapper:hover, .date-input-wrapper:focus-within {
-      border-color: var(--primary-color);
-      box-shadow: 0 4px 12px rgba(108, 92, 231, 0.1);
-      transform: translateY(-2px);
-    }
-    .date-icon {
-      color: var(--primary-color);
-      font-size: 1.2rem;
-      padding: 0 15px;
-    }
-    .phone-input-group {
-      margin-top: 15px;
-      display: none;
-      animation: slideDown 0.3s ease-out;
-    }
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .phone-input-wrapper {
-      display: flex;
-      align-items: center;
-      border: 2px solid #eee;
-      border-radius: 12px;
-      padding: 12px;
-      background: #f8f9fa;
-    }
-    .phone-prefix {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding-right: 10px;
-      border-right: 1px solid #ddd;
-      margin-right: 10px;
-      font-weight: 600;
-      color: #333;
-    }
-  </style>
 </head>
 <body>
-  <div class="main-container">
-    
-    <div class="card">
-      <div class="card-header">
-        <div class="header-title">
-          <div class="icon-box" style="background-color: #e3f2fd; color: var(--primary-color);">
-            <i class="fas fa-wallet"></i>
-          </div>
-          <h2>Pagamento de Reenvio</h2>
-        </div>
+  <div class="page-wrap">
+    <%- include('partials/header') %>
+
+    <main class="main-container">
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb">
+        <a href="/">Inicio</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <a href="/rastreio/<%= order.code %>">Rastreio</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <span class="current">Pagamento de Reenvio</span>
       </div>
 
-      <div class="card-body">
-        
-        <div class="alert alert-danger" style="margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; padding: 15px;">
-          <div style="flex: 1; min-width: 200px; display: flex; align-items: flex-start; gap: 12px;">
-             <div class="alert-icon" style="margin-top: 2px; color: #721c24;">
-                <i class="fas fa-exclamation-circle" style="font-size: 1.2rem;"></i>
-             </div>
-             <div>
-                <strong style="display: block; margin-bottom: 4px; color: #721c24;">Taxa de Reenvio</strong>
-                <p style="margin: 0; font-size: 0.9rem; color: #721c24; line-height: 1.4;">
-                  Devido à tentativa de entrega falhada, é necessário pagar uma taxa de <strong>€ 5,00</strong>.
-                </p>
-             </div>
-          </div>
-          
-          <div style="background: rgba(255,255,255,0.7); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 8px; white-space: nowrap;">
-            <span style="font-size: 0.75rem; color: #666; font-weight: 600; text-transform: uppercase;">Pedido:</span>
-            <span style="font-size: 0.9rem; font-weight: 700; color: #333; letter-spacing: 0.5px; font-family: monospace;"><%= order.code %></span>
-          </div>
-        </div>
-
-      <form id="paymentForm">
-        
-        <div class="form-section" style="margin-bottom: 30px;">
-          <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--text-main);">
-            <i class="fas fa-calendar-alt" style="margin-right: 8px; color: var(--primary-color);"></i>
-            1. Escolha a nova data
-          </h3>
-          <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">
-            Datas disponiveis abaixo.
-          </p>
-          
-          <div class="date-input-wrapper">
-            <i class="fas fa-calendar-check date-icon"></i>
-            <input type="text" id="redeliveryDate" name="redeliveryDate" required 
-                   style="width: 100%; padding: 15px 5px; border: none; font-size: 1.1rem; outline: none; cursor: pointer; background: transparent; color: #333; font-weight: 500;"
-                   placeholder="Selecione uma data disponível...">
-          </div>
-        </div>
-
-        <div class="form-section" style="margin-bottom: 30px;">
-          <h3 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--text-main);">
-            <i class="fas fa-credit-card" style="margin-right: 8px; color: var(--primary-color);"></i>
-            2. Método de Pagamento
-          </h3>
-          
-          <div class="payment-methods" style="display: flex; gap: 15px; flex-wrap: wrap;">
-            <label class="payment-option" onclick="togglePhoneInput(true)" style="flex: 1; min-width: 140px; border: 2px solid #eee; padding: 20px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 10px; transition: all 0.2s;">
-              <input type="radio" name="paymentMethod" value="mbway" checked style="margin-bottom: 10px;">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Logo_MBWay.svg/1280px-Logo_MBWay.svg.png" alt="MB WAY" style="height: 35px; margin: 5px 0;">
-            </label>
-            
-            <label class="payment-option" onclick="togglePhoneInput(false)" style="flex: 1; min-width: 140px; border: 2px solid #eee; padding: 20px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 10px; transition: all 0.2s;">
-              <input type="radio" name="paymentMethod" value="multibanco">
-              <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRztdexX5nIB1qqQKdKFlXSTDWDDWbRkBFggA&s" alt="Multibanco" style="height: 35px; margin: 5px 0;">
-            </label>
-          </div>
-
-          <!-- MB WAY Phone Input -->
-          <div id="mbwayPhoneGroup" class="phone-input-group" style="display: block;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">Número de Telemóvel MB WAY:</label>
-            <div class="phone-input-wrapper">
-              <div class="phone-prefix">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_Portugal.svg/2560px-Flag_of_Portugal.svg.png" style="width: 20px; border-radius: 2px;">
-                +351
-              </div>
-              <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="912 345 678" maxlength="9" 
-                     style="border: none; background: transparent; outline: none; font-size: 1.1rem; width: 100%; letter-spacing: 1px;">
+      <div class="card">
+        <div class="card-header">
+          <div class="header-title">
+            <div class="icon-box icon-box--payment">
+              <i class="fas fa-wallet"></i>
             </div>
-            <small style="color: #888; margin-top: 5px; display: block;">Insira o número associado à sua conta MB WAY.</small>
+            <h2>Pagamento de Reenvio</h2>
           </div>
         </div>
 
-        <button type="submit" id="submitBtn" class="btn-action" style="width: 100%; border: none; font-size: 1.1rem; cursor: pointer; background-color: var(--primary-color);">
-          Pagar € 5,00 e Reagendar <i class="fas fa-check-circle" style="margin-left: 10px;"></i>
-        </button>
-      </form>
+        <div class="card-body">
 
-      <div class="footer-actions">
-        <a href="/rastreio/<%= order.code %>" class="btn-link">
-          <i class="fas fa-times"></i> Cancelar e Voltar
-        </a>
+          <!-- Payment Alert -->
+          <div class="payment-alert">
+            <div class="payment-alert-body">
+              <div class="payment-alert-icon">
+                <i class="fas fa-exclamation-circle"></i>
+              </div>
+              <div class="payment-alert-text">
+                <strong>Taxa de Reenvio</strong>
+                <p>
+                  Devido a tentativa de entrega falhada, e necessario pagar uma taxa de <strong>&euro; 5,00</strong>.
+                </p>
+              </div>
+            </div>
+            <div class="payment-order-badge">
+              <span class="badge-label">Pedido:</span>
+              <span class="badge-code"><%= order.code %></span>
+            </div>
+          </div>
+
+          <form id="paymentForm">
+
+            <!-- Step 1: Date -->
+            <div class="form-section">
+              <h3 class="form-section-title">
+                <i class="fas fa-calendar-alt"></i>
+                1. Escolha a nova data
+              </h3>
+              <p class="form-hint">Datas disponiveis abaixo.</p>
+
+              <div class="date-input-wrapper">
+                <i class="fas fa-calendar-check date-icon"></i>
+                <input type="text" id="redeliveryDate" name="redeliveryDate" required
+                       class="date-input"
+                       placeholder="Selecione uma data disponivel...">
+              </div>
+            </div>
+
+            <!-- Step 2: Payment Method -->
+            <div class="form-section">
+              <h3 class="form-section-title">
+                <i class="fas fa-credit-card"></i>
+                2. Metodo de Pagamento
+              </h3>
+
+              <div class="payment-methods">
+                <label class="payment-option" onclick="togglePhoneInput(true)">
+                  <input type="radio" name="paymentMethod" value="mbway" checked>
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Logo_MBWay.svg/1280px-Logo_MBWay.svg.png" alt="MB WAY">
+                </label>
+
+                <label class="payment-option" onclick="togglePhoneInput(false)">
+                  <input type="radio" name="paymentMethod" value="multibanco">
+                  <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRztdexX5nIB1qqQKdKFlXSTDWDDWbRkBFggA&s" alt="Multibanco">
+                </label>
+              </div>
+
+              <!-- MB WAY Phone Input -->
+              <div id="mbwayPhoneGroup" class="phone-input-group" style="display: block;">
+                <label class="phone-label">Numero de Telemovel MB WAY:</label>
+                <div class="phone-input-wrapper">
+                  <div class="phone-prefix">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_Portugal.svg/2560px-Flag_of_Portugal.svg.png" class="phone-flag" alt="PT">
+                    +351
+                  </div>
+                  <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="912 345 678" maxlength="9"
+                         class="phone-input">
+                </div>
+                <small class="form-help">Insira o numero associado a sua conta MB WAY.</small>
+              </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-submit">
+              Pagar &euro; 5,00 e Reagendar <i class="fas fa-check-circle"></i>
+            </button>
+          </form>
+
+          <div class="footer-actions">
+            <a href="/rastreio/<%= order.code %>" class="btn-link">
+              <i class="fas fa-times"></i> Cancelar e Voltar
+            </a>
+          </div>
+        </div>
       </div>
-    </div>
 
+    </main>
+
+    <%- include('partials/footer') %>
   </div>
 
   <script>
-      // Show/Hide phone input based on payment method
+    // Show/Hide phone input based on payment method
     function togglePhoneInput(show) {
-      const phoneGroup = document.getElementById('mbwayPhoneGroup');
-      const phoneInput = document.getElementById('phoneNumber');
-      
+      var phoneGroup = document.getElementById('mbwayPhoneGroup');
+      var phoneInput = document.getElementById('phoneNumber');
+
       if (show) {
         phoneGroup.style.display = 'block';
         phoneInput.required = true;
       } else {
         phoneGroup.style.display = 'none';
         phoneInput.required = false;
-        phoneInput.value = ''; // Clear value when hidden
+        phoneInput.value = '';
       }
     }
 
     // Initialize toggle state
-    document.addEventListener('DOMContentLoaded', () => {
-        const mbwayRadio = document.querySelector('input[name="paymentMethod"][value="mbway"]');
-        if (mbwayRadio && mbwayRadio.checked) {
-            togglePhoneInput(true);
-        } else {
-            togglePhoneInput(false);
-        }
+    document.addEventListener('DOMContentLoaded', function() {
+      var mbwayRadio = document.querySelector('input[name="paymentMethod"][value="mbway"]');
+      if (mbwayRadio && mbwayRadio.checked) {
+        togglePhoneInput(true);
+      } else {
+        togglePhoneInput(false);
+      }
     });
 
-      // Form submission handler
-    const form = document.getElementById('paymentForm');
+    // Form submission handler
+    var form = document.getElementById('paymentForm');
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
-      
-      const submitBtn = form.querySelector('button[type="submit"]');
-      const originalBtnText = submitBtn.innerHTML;
+
+      var submitBtn = form.querySelector('button[type="submit"]');
+      var originalBtnText = submitBtn.innerHTML;
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
 
-      const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries());
-      
+      var formData = new FormData(form);
+      var data = Object.fromEntries(formData.entries());
+
       // Validate MB WAY phone
       if (data.paymentMethod === 'mbway') {
-          const phone = document.getElementById('phoneNumber').value;
-          if (!phone || phone.length < 9) {
-             Swal.fire({
-                 icon: 'warning',
-                 title: 'Número Inválido',
-                 text: 'Por favor, insira um número de telemóvel válido para o pagamento MB WAY.',
-                 confirmButtonColor: '#6c5ce7'
-             });
-             submitBtn.disabled = false;
-             submitBtn.innerHTML = originalBtnText;
-             return;
-          }
-          data.phoneNumber = phone;
+        var phone = document.getElementById('phoneNumber').value;
+        if (!phone || phone.length < 9) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Numero Invalido',
+            text: 'Por favor, insira um numero de telemovel valido para o pagamento MB WAY.',
+            confirmButtonColor: '#4834D4'
+          });
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+          return;
+        }
+        data.phoneNumber = phone;
       }
 
       try {
-        const response = await fetch('/api/reenvio/<%= order.code %>/create-payment', {
+        var response = await fetch('/api/reenvio/<%= order.code %>/create-payment', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
 
-        const result = await response.json();
+        var result = await response.json();
 
         if (result.success) {
           if (data.paymentMethod === 'mbway') {
             Swal.fire({
               title: 'Pagamento Iniciado!',
-              html: `
-                <div style="text-align: center;">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Logo_MBWay.svg/1280px-Logo_MBWay.svg.png" style="height: 50px; margin-bottom: 20px;">
-                  <p>Enviamos um pedido de pagamento para o número:</p>
-                  <p style="font-size: 1.2rem; font-weight: bold; margin: 10px 0;">${data.phoneNumber}</p>
-                  <p>Por favor, aceite a transação na app MB WAY.</p>
-                  <div style="margin: 20px 0; font-size: 1.2rem; font-weight: bold;">€ 5,00</div>
-                  <div class="timer" style="color: #666; font-size: 0.9rem;">Aguardando confirmação... <span id="countdown">90</span>s</div>
-                </div>
-              `,
+              html:
+                '<div style="text-align: center;">' +
+                  '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Logo_MBWay.svg/1280px-Logo_MBWay.svg.png" style="height: 50px; margin-bottom: 20px;">' +
+                  '<p>Enviamos um pedido de pagamento para o numero:</p>' +
+                  '<p style="font-size: 1.2rem; font-weight: bold; margin: 10px 0;">' + data.phoneNumber + '</p>' +
+                  '<p>Por favor, aceite a transacao na app MB WAY.</p>' +
+                  '<div style="margin: 20px 0; font-size: 1.2rem; font-weight: bold;">&euro; 5,00</div>' +
+                  '<div class="timer" style="color: #666; font-size: 0.9rem;">Aguardando confirmacao... <span id="countdown">90</span>s</div>' +
+                '</div>',
               showConfirmButton: false,
               allowOutsideClick: false,
-              didOpen: () => {
-                let timeLeft = 90;
-                const timer = setInterval(() => {
-                    const el = document.getElementById('countdown');
-                    if(el) el.innerText = --timeLeft;
-                    if(timeLeft <= 0) {
-                        clearInterval(timer);
-                        Swal.fire({
-                            title: 'Tempo Esgotado',
-                            text: 'O tempo para aceitar o pagamento expirou.',
-                            icon: 'warning'
-                        });
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalBtnText;
-                    }
+              didOpen: function() {
+                var timeLeft = 90;
+                var timer = setInterval(function() {
+                  var el = document.getElementById('countdown');
+                  if (el) el.innerText = --timeLeft;
+                  if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    Swal.fire({
+                      title: 'Tempo Esgotado',
+                      text: 'O tempo para aceitar o pagamento expirou.',
+                      icon: 'warning'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                  }
                 }, 1000);
 
-                // Poll for payment status (Real)
-                const checkStatus = setInterval(async () => {
-                    try {
-                       const statusResponse = await fetch(`/api/reenvio/${data.paymentId || result.paymentId}/check-status`);
-                       const statusResult = await statusResponse.json();
-                       
-                       if (statusResult.paid) {
-                           clearInterval(checkStatus);
-                           clearInterval(timer);
-                           Swal.fire({
-                               icon: 'success',
-                               title: 'Pagamento Confirmado!',
-                               text: 'Seu reenvio foi agendado com sucesso.',
-                               confirmButtonText: 'Ver Rastreio',
-                               confirmButtonColor: '#6c5ce7'
-                           }).then(() => {
-                               window.location.href = '/rastreio/<%= order.code %>';
-                           });
-                       }
-                    } catch(e) { console.error(e); }
-                }, 3000); // Check every 3 seconds
+                // Poll for payment status
+                var checkStatus = setInterval(async function() {
+                  try {
+                    var statusResponse = await fetch('/api/reenvio/' + (data.paymentId || result.paymentId) + '/check-status');
+                    var statusResult = await statusResponse.json();
+
+                    if (statusResult.paid) {
+                      clearInterval(checkStatus);
+                      clearInterval(timer);
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Pagamento Confirmado!',
+                        text: 'Seu reenvio foi agendado com sucesso.',
+                        confirmButtonText: 'Ver Rastreio',
+                        confirmButtonColor: '#4834D4'
+                      }).then(function() {
+                        window.location.href = '/rastreio/<%= order.code %>';
+                      });
+                    }
+                  } catch(e) { console.error(e); }
+                }, 3000);
               }
-            }).then(() => {
-                // If user closes modal, reload to update status
-                window.location.reload();
+            }).then(function() {
+              window.location.reload();
             });
 
           } else {
             // Multibanco Flow
             Swal.fire({
               title: 'Dados para Pagamento',
-              html: `
-                <div style="text-align: center;">
-                  <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRztdexX5nIB1qqQKdKFlXSTDWDDWbRkBFggA&s" style="height: 50px; margin-bottom: 20px;">
-                  <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 15px;">
-                    <p style="margin: 5px 0; display: flex; justify-content: space-between;"><span>Entidade:</span> <strong>${result.entity || '12345'}</strong></p>
-                    <p style="margin: 5px 0; display: flex; justify-content: space-between;"><span>Referência:</span> <strong>${result.reference || '123 456 789'}</strong></p>
-                    <p style="margin: 5px 0; display: flex; justify-content: space-between;"><span>Valor:</span> <strong>€ 5,00</strong></p>
-                  </div>
-                  <p style="font-size: 0.9rem; color: #666;">Realize o pagamento em qualquer caixa Multibanco ou Homebanking.</p>
-                </div>
-              `,
+              html:
+                '<div style="text-align: center;">' +
+                  '<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRztdexX5nIB1qqQKdKFlXSTDWDDWbRkBFggA&s" style="height: 50px; margin-bottom: 20px;">' +
+                  '<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: left; margin-bottom: 15px;">' +
+                    '<p style="margin: 5px 0; display: flex; justify-content: space-between;"><span>Entidade:</span> <strong>' + (result.entity || '12345') + '</strong></p>' +
+                    '<p style="margin: 5px 0; display: flex; justify-content: space-between;"><span>Referencia:</span> <strong>' + (result.reference || '123 456 789') + '</strong></p>' +
+                    '<p style="margin: 5px 0; display: flex; justify-content: space-between;"><span>Valor:</span> <strong>&euro; 5,00</strong></p>' +
+                  '</div>' +
+                  '<p style="font-size: 0.9rem; color: #666;">Realize o pagamento em qualquer caixa Multibanco ou Homebanking.</p>' +
+                '</div>',
               showConfirmButton: false,
-              didOpen: () => {
-                // Poll for payment status (Real)
-                const checkStatus = setInterval(async () => {
-                    try {
-                       const statusResponse = await fetch(`/api/reenvio/${data.paymentId || result.paymentId}/check-status`);
-                       const statusResult = await statusResponse.json();
-                       
-                       if (statusResult.paid) {
-                           clearInterval(checkStatus);
-                           Swal.fire({
-                               icon: 'success',
-                               title: 'Pagamento Confirmado!',
-                               text: 'Seu reenvio foi agendado com sucesso.',
-                               confirmButtonText: 'Ver Rastreio',
-                               confirmButtonColor: '#6c5ce7'
-                           }).then(() => {
-                               window.location.href = '/rastreio/<%= order.code %>';
-                           });
-                       }
-                    } catch(e) { console.error(e); }
-                }, 5000); // Check every 5 seconds for Multibanco
+              didOpen: function() {
+                var checkStatus = setInterval(async function() {
+                  try {
+                    var statusResponse = await fetch('/api/reenvio/' + (data.paymentId || result.paymentId) + '/check-status');
+                    var statusResult = await statusResponse.json();
+
+                    if (statusResult.paid) {
+                      clearInterval(checkStatus);
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Pagamento Confirmado!',
+                        text: 'Seu reenvio foi agendado com sucesso.',
+                        confirmButtonText: 'Ver Rastreio',
+                        confirmButtonColor: '#4834D4'
+                      }).then(function() {
+                        window.location.href = '/rastreio/<%= order.code %>';
+                      });
+                    }
+                  } catch(e) { console.error(e); }
+                }, 5000);
               }
             });
           }
@@ -342,61 +303,60 @@
     });
 
     async function confirmPayment(paymentId, date) {
-        try {
-            const response = await fetch('/api/reenvio/<%= order.code %>/confirm', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paymentId, redeliveryDate: date })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Pagamento Confirmado!',
-                    text: 'Seu reenvio foi agendado com sucesso.',
-                    confirmButtonText: 'Ver Rastreio',
-                    confirmButtonColor: '#6c5ce7'
-                }).then(() => {
-                    window.location.href = '/rastreio/<%= order.code %>';
-                });
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (e) {
-            Swal.fire('Erro', 'Falha ao confirmar pagamento.', 'error');
+      try {
+        var response = await fetch('/api/reenvio/<%= order.code %>/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId: paymentId, redeliveryDate: date })
+        });
+
+        var result = await response.json();
+
+        if (result.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Pagamento Confirmado!',
+            text: 'Seu reenvio foi agendado com sucesso.',
+            confirmButtonText: 'Ver Rastreio',
+            confirmButtonColor: '#4834D4'
+          }).then(function() {
+            window.location.href = '/rastreio/<%= order.code %>';
+          });
+        } else {
+          throw new Error(result.error);
         }
+      } catch (e) {
+        Swal.fire('Erro', 'Falha ao confirmar pagamento.', 'error');
+      }
     }
- 
-      // Init Flatpickr
+
+    // Init Flatpickr
     flatpickr("#redeliveryDate", {
-        dateFormat: "Y-m-d", // Value format sent to server (YYYY-MM-DD)
-        altInput: true,
-        altFormat: "d/m/Y",  // Display format (DD/MM/YYYY)
-        minDate: "<%= minDate %>",
-        maxDate: "<%= maxDate %>",
-        locale: "pt", // Portuguese locale
-        disableMobile: "true", // Force Flatpickr UI on mobile for consistent format
-        theme: "material_blue",
-        onOpen: function(selectedDates, dateStr, instance) {
-            // Add custom class to calendar container for extra styling if needed
-            instance.calendarContainer.classList.add('custom-calendar');
-        }
+      dateFormat: "Y-m-d",
+      altInput: true,
+      altFormat: "d/m/Y",
+      minDate: "<%= minDate %>",
+      maxDate: "<%= maxDate %>",
+      locale: "pt",
+      disableMobile: "true",
+      theme: "material_blue",
+      onOpen: function(selectedDates, dateStr, instance) {
+        instance.calendarContainer.classList.add('custom-calendar');
+      }
     });
 
-    // Custom validation not strictly needed with Flatpickr min/max, but kept as backup
-    const dateInput = document.getElementById('redeliveryDate');
-     dateInput.addEventListener('change', function() {
-      const selected = new Date(this.value);
-      const min = new Date('<%= minDate %>');
-      const max = new Date('<%= maxDate %>');
-      
+    // Date validation backup
+    var dateInput = document.getElementById('redeliveryDate');
+    dateInput.addEventListener('change', function() {
+      var selected = new Date(this.value);
+      var min = new Date('<%= minDate %>');
+      var max = new Date('<%= maxDate %>');
+
       if (selected < min) {
         alert('A data deve ser a partir de ' + min.toLocaleDateString('pt-BR'));
         this.value = '<%= minDate %>';
       } else if (selected > max) {
-        alert('A data não pode exceder 30 dias.');
+        alert('A data nao pode exceder 30 dias.');
         this.value = '<%= maxDate %>';
       }
     });

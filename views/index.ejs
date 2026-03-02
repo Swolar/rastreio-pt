@@ -5,25 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rastreio de Encomendas</title>
   <link rel="stylesheet" href="/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <div class="main-container">
-    <div class="search-box">
-      <div style="margin-bottom: 20px; font-size: 3rem; color: var(--primary-color);">
-        <i class="fas fa-search-location"></i>
+  <div class="page-wrap">
+    <%- include('partials/header') %>
+
+    <main class="main-container">
+      <div class="home-hero">
+        <div class="hero-badge">
+          <i class="fas fa-satellite-dish"></i> Rastreamento em Tempo Real
+        </div>
+
+        <h1 class="hero-title">Rastreie a sua<br>encomenda</h1>
+
+        <p class="hero-subtitle">
+          Acompanhe o estado da sua encomenda em tempo real.
+          Insira o codigo de rastreio abaixo.
+        </p>
+
+        <form class="search-form" onsubmit="event.preventDefault(); var code = document.getElementById('trackingCode').value.trim(); if(code) window.location.href = '/rastreio/' + code;">
+          <div class="search-input-group">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="trackingCode" placeholder="Ex: AAAA-BBBB-1234" required autocomplete="off">
+            <button type="submit" class="btn-primary">
+              Rastrear <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </form>
       </div>
-      <h1>Rastreio de Encomendas</h1>
-      <p style="margin-bottom: 30px; color: var(--text-muted);">Digite o código de rastreio para acompanhar seu pedido em tempo real.</p>
-      
-      <form action="/rastreio" method="GET" onsubmit="event.preventDefault(); const code = document.getElementById('trackingCode').value; if(code) window.location.href = '/rastreio/' + code;">
-        <input type="text" id="trackingCode" placeholder="Ex: AAAA-BBBB-1234" required>
-        <button type="submit">
-          Rastrear Pedido <i class="fas fa-arrow-right" style="margin-left: 10px;"></i>
-        </button>
-      </form>
-    </div>
+
+      <div class="trust-bar">
+        <div class="trust-item">
+          <i class="fas fa-bolt"></i>
+          <span>Atualizacao Instantanea</span>
+        </div>
+        <div class="trust-item">
+          <i class="fas fa-shield-alt"></i>
+          <span>100% Seguro</span>
+        </div>
+        <div class="trust-item">
+          <i class="fas fa-headset"></i>
+          <span>Suporte 24/7</span>
+        </div>
+      </div>
+    </main>
+
+    <%- include('partials/footer') %>
   </div>
 </body>
 </html>

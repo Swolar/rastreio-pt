@@ -5,154 +5,162 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rastreio do Pedido - <%= order.code %></title>
   <link rel="stylesheet" href="/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <div class="main-container">
-    
-    <!-- Status Card -->
-    <div class="card status-card">
-      <div class="card-header">
-        <div class="header-title">
-          <div class="icon-box">
-            <i class="fas fa-box-open"></i>
+  <div class="page-wrap">
+    <%- include('partials/header') %>
+
+    <main class="main-container">
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb">
+        <a href="/">Inicio</a>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <span>Rastreio</span>
+        <span class="separator"><i class="fas fa-chevron-right"></i></span>
+        <span class="current"><%= order.code %></span>
+      </div>
+
+      <!-- Status Card -->
+      <div class="card status-card">
+        <div class="card-header">
+          <div class="header-title">
+            <div class="icon-box">
+              <i class="fas fa-box-open"></i>
+            </div>
+            <div>
+              <h1>Status do Pedido</h1>
+              <span class="status-pill"><%= order.statusText %></span>
+            </div>
           </div>
-          <h1>Status do Pedido</h1>
+          <div class="order-badge">
+            <%= order.code %>
+          </div>
         </div>
-        <div class="order-badge">
-          <%= order.code %>
+
+        <div class="timeline-container">
+          <%
+          const visualSteps = [
+            { label: 'Confirmado', icon: 'fa-clipboard-check', activeStatus: [0,1,2,3,4,5,6,7,8] },
+            { label: 'Processando', icon: 'fa-cog', activeStatus: [1,2,3,4,5,6,7,8] },
+            { label: 'Enviado', icon: 'fa-shipping-fast', activeStatus: [2,3,4,5,6,7,8] },
+            { label: 'Em Transito', icon: 'fa-route', activeStatus: [3,4,5,6,7,8] },
+            { label: 'Saiu p/ Entrega', icon: 'fa-truck', activeStatus: [4,5,6,7,8] },
+            { label: 'Entregue', icon: 'fa-home', activeStatus: [7] }
+          ];
+
+          let currentStepIndex = 0;
+          if (order.status >= 1) currentStepIndex = 1;
+          if (order.status >= 2) currentStepIndex = 2;
+          if (order.status >= 3) currentStepIndex = 3;
+          if (order.status >= 4) currentStepIndex = 4;
+          if (order.status === 7) currentStepIndex = 5;
+          if (order.status === 8) currentStepIndex = 4;
+          %>
+
+          <div class="gamified-timeline">
+            <% visualSteps.forEach((step, index) => {
+               const isCompleted = index <= currentStepIndex;
+               const isCurrent = index === currentStepIndex;
+               const isFinal = index === visualSteps.length - 1;
+            %>
+              <div class="timeline-step <%= isCompleted ? 'completed' : '' %> <%= isCurrent ? 'current' : '' %>">
+                <div class="step-connector"></div>
+                <div class="step-icon-wrapper">
+                  <% if (isCompleted && !isFinal && !isCurrent) { %>
+                    <i class="fas fa-check"></i>
+                  <% } else { %>
+                    <i class="fas <%= step.icon %>"></i>
+                  <% } %>
+                </div>
+                <div class="step-label"><%= step.label %></div>
+              </div>
+            <% }); %>
+          </div>
         </div>
       </div>
 
-      <div class="timeline-container">
-        <% 
-        // Mapeamento de status para passos visuais
-        // 0: Confirmado, 1: Processando, 2: Enviado, 3: Trânsito, 4: Saiu Entrega, 5: Falhou, 6: Reenvio, 7: Entregue
-        
-        const visualSteps = [
-          { label: 'Confirmado', icon: 'fa-clipboard-check', activeStatus: [0,1,2,3,4,5,6,7,8] },
-          { label: 'Processando', icon: 'fa-cog', activeStatus: [1,2,3,4,5,6,7,8] },
-          { label: 'Enviado', icon: 'fa-shipping-fast', activeStatus: [2,3,4,5,6,7,8] },
-          { label: 'Em Trânsito', icon: 'fa-route', activeStatus: [3,4,5,6,7,8] },
-          { label: 'Saiu p/ Entrega', icon: 'fa-truck', activeStatus: [4,5,6,7,8] },
-          { label: 'Entregue', icon: 'fa-home', activeStatus: [7] }
-        ];
+      <!-- Info Grid -->
+      <div class="info-grid">
+        <div class="card info-card">
+          <div class="card-icon-header">
+            <i class="far fa-user"></i>
+            <span>Cliente</span>
+          </div>
+          <div class="card-content">
+            <h3><%= order.maskedName %></h3>
+            <p class="email-text"><i class="far fa-envelope"></i> <%= order.maskedEmail %></p>
+          </div>
+        </div>
 
-        // Determinar o índice do passo atual para colorir
-        let currentStepIndex = 0;
-        if (order.status >= 1) currentStepIndex = 1;
-        if (order.status >= 2) currentStepIndex = 2;
-        if (order.status >= 3) currentStepIndex = 3;
-        if (order.status >= 4) currentStepIndex = 4; // Inclui falha e reenvio visualmente aqui por enquanto
-        if (order.status === 7) currentStepIndex = 5;
-        if (order.status === 8) currentStepIndex = 4; // Devolvido stays at "Out for delivery" or creates new step? Let's keep it simple.
+        <div class="card info-card">
+          <div class="card-icon-header">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Endereco de Entrega</span>
+          </div>
+          <div class="card-content">
+            <p class="address-text"><%= order.address %></p>
+          </div>
+        </div>
+      </div>
 
+      <!-- Alert Box for Issues -->
+      <% if (order.status === 5) { %>
+        <div class="card alert-card warning">
+          <div class="alert-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <div class="alert-content">
+            <h3>Entrega nao realizada</h3>
+            <p>Tentamos entregar seu pedido, mas nao havia ninguem no local.</p>
+            <a href="/reenvio/<%= order.code %>" class="btn-action">
+              Resolver Agora <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+      <% } else if (order.status === 8) { %>
+        <div class="card alert-card danger">
+          <div class="alert-icon">
+            <i class="fas fa-undo"></i>
+          </div>
+          <div class="alert-content">
+            <h3>Pedido Devolvido</h3>
+            <p>Apos 5 tentativas de reenvio, o pedido retornou a loja. Nossa equipe entrara em contato.</p>
+          </div>
+        </div>
+      <% } %>
 
-        // Se falhou (5), podemos tratar visualmente diferente se quisermos, mas por enquanto mantemos no passo 4
-        %>
-
-        <div class="gamified-timeline">
-          <% visualSteps.forEach((step, index) => { 
-             const isCompleted = index <= currentStepIndex;
-             const isCurrent = index === currentStepIndex;
-             // Se for o último passo e estiver completo, é especial
-             const isFinal = index === visualSteps.length - 1;
-          %>
-            <div class="timeline-step <%= isCompleted ? 'completed' : '' %> <%= isCurrent ? 'current' : '' %>">
-              <div class="step-connector"></div>
-              <div class="step-icon-wrapper">
-                <% if (isCompleted && !isFinal && !isCurrent) { %>
-                  <i class="fas fa-check"></i>
-                <% } else { %>
-                  <i class="fas <%= step.icon %>"></i>
-                <% } %>
+      <!-- History Section -->
+      <div class="card history-card">
+        <div class="card-header-simple">
+          <h2>Historico Detalhado</h2>
+        </div>
+        <div class="history-list">
+          <% order.events.forEach(event => { %>
+            <div class="history-item">
+              <div class="history-time">
+                <span class="date"><%= new Date(event.timestamp).toLocaleDateString('pt-BR') %></span>
+                <span class="time"><%= new Date(event.timestamp).toLocaleTimeString('pt-BR') %></span>
               </div>
-              <div class="step-label"><%= step.label %></div>
+              <div class="history-info">
+                <div class="status-dot"></div>
+                <p class="description"><%= event.description %></p>
+                <span class="status-tag"><%= visualSteps[Math.min(event.status, 5)] ? visualSteps[Math.min(event.status, 5)].label : 'Atualizacao' %></span>
+              </div>
             </div>
           <% }); %>
         </div>
       </div>
-    </div>
 
-    <!-- Info Grid -->
-    <div class="info-grid">
-      <!-- Customer Card -->
-      <div class="card info-card">
-        <div class="card-icon-header">
-          <i class="far fa-user"></i>
-          <span>Cliente</span>
-        </div>
-        <div class="card-content">
-          <h3><%= order.maskedName %></h3>
-          <p class="email-text"><i class="far fa-envelope"></i> <%= order.maskedEmail %></p>
-        </div>
+      <div class="footer-actions">
+        <a href="/" class="btn-link"><i class="fas fa-chevron-left"></i> Voltar para busca</a>
       </div>
 
-      <!-- Address Card -->
-      <div class="card info-card">
-        <div class="card-icon-header">
-          <i class="fas fa-map-marker-alt"></i>
-          <span>Endereço de Entrega</span>
-        </div>
-        <div class="card-content">
-          <p class="address-text"><%= order.address %></p>
-        </div>
-      </div>
-    </div>
+    </main>
 
-    <!-- Alert Box for Issues -->
-    <% if (order.status === 5) { %>
-      <div class="card alert-card warning">
-        <div class="alert-icon">
-          <i class="fas fa-exclamation-triangle"></i>
-        </div>
-        <div class="alert-content">
-          <h3>Entrega não realizada</h3>
-          <p>Tentamos entregar seu pedido, mas não havia ninguém no local.</p>
-          <a href="/reenvio/<%= order.code %>" class="btn-action">
-            Resolver Agora <i class="fas fa-arrow-right"></i>
-          </a>
-        </div>
-      </div>
-    <% } else if (order.status === 8) { %>
-      <div class="card alert-card danger" style="border-left: 4px solid #d63031; background: #fff5f5;">
-        <div class="alert-icon" style="color: #d63031;">
-          <i class="fas fa-undo"></i>
-        </div>
-        <div class="alert-content">
-          <h3 style="color: #d63031;">Pedido Devolvido</h3>
-          <p>Após 5 tentativas de reenvio, o pedido retornou à loja. Nossa equipe entrará em contato.</p>
-        </div>
-      </div>
-    <% } %>
-
-    <!-- History Section (Collapsible or Clean List) -->
-    <div class="card history-card">
-      <div class="card-header-simple">
-        <h2>Histórico Detalhado</h2>
-      </div>
-      <div class="history-list">
-        <% order.events.forEach(event => { %>
-          <div class="history-item">
-            <div class="history-time">
-              <span class="date"><%= new Date(event.timestamp).toLocaleDateString('pt-BR') %></span>
-              <span class="time"><%= new Date(event.timestamp).toLocaleTimeString('pt-BR') %></span>
-            </div>
-            <div class="history-info">
-              <div class="status-dot"></div>
-              <p class="description"><%= event.description %></p>
-              <span class="status-tag"><%= visualSteps[Math.min(event.status, 5)] ? visualSteps[Math.min(event.status, 5)].label : 'Atualização' %></span>
-            </div>
-          </div>
-        <% }); %>
-      </div>
-    </div>
-
-    <div class="footer-actions">
-      <a href="/" class="btn-link"><i class="fas fa-chevron-left"></i> Voltar para busca</a>
-    </div>
-
+    <%- include('partials/footer') %>
   </div>
 </body>
 </html>
