@@ -80,7 +80,6 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
     if (isCompleted) {
       dotColor = brand.primary;
       dotBorder = brand.primary;
-      lineColor = brand.primary;
       labelColor = brand.textSecondary;
       statusText = `<span style="font-size:11px; color:${brand.primary}; font-weight:600;">Concluido</span>`;
     } else if (isCurrent) {
