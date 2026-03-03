@@ -17,6 +17,10 @@ model Order {
   name             String
   email            String
   address          String?
+  country          String   @default("PT")  // "PT" or "BR"
+  phone            String?
+  cpf              String?                   // Brazil only (CPF)
+  emailsSent       Int      @default(0)      // Counter for emails sent
   status           Int      @default(0) // 0: Confirmed, 1: Processing, 2: Shipped, 3: In Transit, 4: Out for Delivery, 5: Delivery Failed, 6: Redelivery Scheduled, 7: Delivered
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -50,6 +54,7 @@ model ResendPayment {
   order         Order     @relation(fields: [orderId], references: [id])
   attemptNumber Int
   amount        Float
+  currency      String    @default("EUR") // "EUR" or "BRL"
   method        String
   status        String    // PENDING, PAID, FAILED, EXPIRED
   scheduledDate DateTime? // Selected redelivery date

@@ -25,15 +25,21 @@ const generateTrackingCode = () => {
 // Create a new order
 exports.createOrder = async (req, res) => {
   try {
-    const { name, email, address } = req.body;
-    
+    const { name, email, address, country, phone, cpf } = req.body;
+
     if (!name || !email) {
       return res.status(400).json({ error: 'Name and email are required' });
     }
 
+    const orderCountry = (country === 'BR') ? 'BR' : 'PT';
+
+    if (orderCountry === 'BR' && !cpf) {
+      return res.status(400).json({ error: 'CPF is required for Brazilian orders' });
+    }
+
     let code;
     let isUnique = false;
-    
+
     // Ensure unique tracking code
     while (!isUnique) {
       code = generateTrackingCode();
@@ -41,30 +47,34 @@ exports.createOrder = async (req, res) => {
       if (!existing) isUnique = true;
     }
 
+    const eventDesc = orderCountry === 'PT' ? 'Encomenda Confirmada' : 'Pedido Confirmado';
+
     const order = await prisma.order.create({
       data: {
         code,
         name,
         email,
         address,
-        status: 0, // Confirmed
+        country: orderCountry,
+        phone: phone || null,
+        cpf: orderCountry === 'BR' ? cpf : null,
+        status: 0,
         events: {
           create: [
             {
               status: 0,
-              description: 'Pedido Confirmado'
+              description: eventDesc
             }
           ]
         }
       }
     });
 
-    // Send confirmation email (optional, but good practice)
-    await emailService.sendConfirmationEmail(order); 
+    await emailService.sendConfirmationEmail(order);
 
-    res.status(201).json({ 
-      message: 'Order created successfully', 
-      order 
+    res.status(201).json({
+      message: 'Order created successfully',
+      order
     });
   } catch (error) {
     console.error('Error creating order:', error);
@@ -214,14 +224,109 @@ exports.resendEmail = async (req, res) => {
   }
 };
 
-// Admin list orders (Simple JSON API for now)
+// Admin list orders with optional date range filter
 exports.listOrders = async (req, res) => {
   try {
+    const { dateRange } = req.query;
+    let dateFilter = {};
+    const now = new Date();
+
+    if (dateRange === 'today') {
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      dateFilter = { createdAt: { gte: startOfDay } };
+    } else if (dateRange === '7d') {
+      const d = new Date(now);
+      d.setDate(now.getDate() - 7);
+      dateFilter = { createdAt: { gte: d } };
+    } else if (dateRange === '1m') {
+      const d = new Date(now);
+      d.setMonth(now.getMonth() - 1);
+      dateFilter = { createdAt: { gte: d } };
+    } else if (dateRange === '6m') {
+      const d = new Date(now);
+      d.setMonth(now.getMonth() - 6);
+      dateFilter = { createdAt: { gte: d } };
+    }
+
     const orders = await prisma.order.findMany({
+      where: dateFilter,
       orderBy: { createdAt: 'desc' }
     });
     res.json(orders);
   } catch (error) {
     res.status(500).json({ error: 'Failed to list orders' });
   }
+};
+
+// Dashboard stats endpoint
+exports.getDashboardStats = async (req, res) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+    const allOrders = await prisma.order.findMany();
+
+    const thisMonthOrders = allOrders.filter(o => new Date(o.createdAt) >= startOfMonth);
+    const lastMonthOrders = allOrders.filter(o => {
+      const d = new Date(o.createdAt);
+      return d >= startOfLastMonth && d <= endOfLastMonth;
+    });
+
+    const totalEmailsSent = allOrders.reduce((sum, o) => sum + (o.emailsSent || 0), 0);
+
+    let feesGeneratedPT = 0, feesGeneratedBR = 0;
+    let feesPaidPT = 0, feesPaidBR = 0;
+    let generatedCount = 0, paidCount = 0;
+
+    allOrders.forEach(o => {
+      if (o.redeliveryFee > 0) {
+        generatedCount++;
+        if (o.country === 'BR') {
+          feesGeneratedBR += o.redeliveryFee;
+          if (o.isRedeliveryPaid) { feesPaidBR += o.redeliveryFee; paidCount++; }
+        } else {
+          feesGeneratedPT += o.redeliveryFee;
+          if (o.isRedeliveryPaid) { feesPaidPT += o.redeliveryFee; paidCount++; }
+        }
+      }
+    });
+
+    const thisMonthRevenue = thisMonthOrders
+      .filter(o => o.isRedeliveryPaid && o.redeliveryFee > 0)
+      .reduce((sum, o) => sum + o.redeliveryFee, 0);
+    const lastMonthRevenue = lastMonthOrders
+      .filter(o => o.isRedeliveryPaid && o.redeliveryFee > 0)
+      .reduce((sum, o) => sum + o.redeliveryFee, 0);
+
+    res.json({
+      totalOrders: allOrders.length,
+      totalEmailsSent,
+      feesGenerated: { PT: feesGeneratedPT, BR: feesGeneratedBR, total: feesGeneratedPT + feesGeneratedBR },
+      feesPaid: { PT: feesPaidPT, BR: feesPaidBR, total: feesPaidPT + feesPaidBR },
+      generatedCount,
+      paidCount,
+      collectionRate: generatedCount > 0 ? ((paidCount / generatedCount) * 100).toFixed(1) : 0,
+      thisMonthRevenue,
+      lastMonthRevenue,
+      revenueChange: lastMonthRevenue > 0
+        ? (((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100).toFixed(1)
+        : (thisMonthRevenue > 0 ? 100 : 0),
+      ordersByCountry: {
+        PT: allOrders.filter(o => o.country !== 'BR').length,
+        BR: allOrders.filter(o => o.country === 'BR').length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+};
+
+// Webhook placeholder for external order creation
+exports.webhookCreateOrder = async (req, res) => {
+  // TODO: Validate webhook signature
+  // TODO: Map external payload to { name, email, address, country, phone, cpf }
+  res.status(501).json({ message: 'Webhook endpoint ready. Implementation pending.' });
 };

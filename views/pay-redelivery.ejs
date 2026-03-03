@@ -49,12 +49,17 @@
               <div class="payment-alert-text">
                 <strong>Taxa de Reenvio</strong>
                 <p>
-                  Devido a tentativa de entrega falhada, e necessario pagar uma taxa de <strong>&euro; 5,00</strong>.
+                  Devido a tentativa de entrega falhada, e necessario pagar uma taxa de
+                  <% if (order.country === 'BR') { %>
+                    <strong>R$ 25,00</strong>.
+                  <% } else { %>
+                    <strong>&euro; 5,00</strong>.
+                  <% } %>
                 </p>
               </div>
             </div>
             <div class="payment-order-badge">
-              <span class="badge-label">Pedido:</span>
+              <span class="badge-label"><%= order.country === 'BR' ? 'Pedido' : 'Encomenda' %>:</span>
               <span class="badge-code"><%= order.code %></span>
             </div>
           </div>
@@ -84,35 +89,56 @@
                 2. Metodo de Pagamento
               </h3>
 
-              <div class="payment-methods">
-                <label class="payment-option" onclick="togglePhoneInput(true)">
-                  <input type="radio" name="paymentMethod" value="mbway" checked>
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Logo_MBWay.svg/1280px-Logo_MBWay.svg.png" alt="MB WAY">
-                </label>
-
-                <label class="payment-option" onclick="togglePhoneInput(false)">
-                  <input type="radio" name="paymentMethod" value="multibanco">
-                  <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRztdexX5nIB1qqQKdKFlXSTDWDDWbRkBFggA&s" alt="Multibanco">
-                </label>
-              </div>
-
-              <!-- MB WAY Phone Input -->
-              <div id="mbwayPhoneGroup" class="phone-input-group" style="display: block;">
-                <label class="phone-label">Numero de Telemovel MB WAY:</label>
-                <div class="phone-input-wrapper">
-                  <div class="phone-prefix">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_Portugal.svg/2560px-Flag_of_Portugal.svg.png" class="phone-flag" alt="PT">
-                    +351
-                  </div>
-                  <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="912 345 678" maxlength="9"
-                         class="phone-input">
+              <% if (order.country === 'BR') { %>
+                <!-- Brazil: PIX -->
+                <div class="payment-methods">
+                  <label class="payment-option" style="flex: 1;">
+                    <input type="radio" name="paymentMethod" value="pix" checked>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <svg width="24" height="24" viewBox="0 0 512 512" fill="none">
+                        <path d="M395.2 395.2c-13.6 13.6-31.7 21.1-50.9 21.1s-37.3-7.5-50.9-21.1l-79.3-79.3c-4.7-4.7-12.3-4.7-17 0l-79.3 79.3c-13.6 13.6-31.7 21.1-50.9 21.1s-37.3-7.5-50.9-21.1l-8.7-8.7 88-88c18.8-18.8 49.4-18.8 68.2 0l79.3 79.3c4.7 4.7 12.3 4.7 17 0l79.3-79.3c18.8-18.8 49.4-18.8 68.2 0l88 88-8.7 8.7z" fill="#32BCAD"/>
+                        <path d="M395.2 116.8c13.6 13.6 21.1 31.7 21.1 50.9s-7.5 37.3-21.1 50.9l-79.3 79.3c-4.7 4.7-12.3 4.7-17 0l-79.3-79.3c-9.4-9.4-21.7-14.1-34.1-14.1s-24.7 4.7-34.1 14.1l-79.3 79.3c-4.7 4.7-12.3 4.7-17 0l-79.3-79.3c-28.1-28.1-28.1-73.7 0-101.8l8.7-8.7 88 88c18.8 18.8 49.4 18.8 68.2 0l79.3-79.3c4.7-4.7 12.3-4.7 17 0l79.3 79.3c18.8 18.8 49.4 18.8 68.2 0l88-88 8.7 8.7z" fill="#32BCAD"/>
+                      </svg>
+                      <span style="font-weight: 600;">PIX</span>
+                    </div>
+                  </label>
                 </div>
-                <small class="form-help">Insira o numero associado a sua conta MB WAY.</small>
-              </div>
+              <% } else { %>
+                <!-- Portugal: MBWay + Multibanco -->
+                <div class="payment-methods">
+                  <label class="payment-option" onclick="togglePhoneInput(true)">
+                    <input type="radio" name="paymentMethod" value="mbway" checked>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Logo_MBWay.svg/1280px-Logo_MBWay.svg.png" alt="MB WAY">
+                  </label>
+
+                  <label class="payment-option" onclick="togglePhoneInput(false)">
+                    <input type="radio" name="paymentMethod" value="multibanco">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRztdexX5nIB1qqQKdKFlXSTDWDDWbRkBFggA&s" alt="Multibanco">
+                  </label>
+                </div>
+
+                <!-- MB WAY Phone Input -->
+                <div id="mbwayPhoneGroup" class="phone-input-group" style="display: block;">
+                  <label class="phone-label">Numero de Telemovel MB WAY:</label>
+                  <div class="phone-input-wrapper">
+                    <div class="phone-prefix">
+                      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_Portugal.svg/2560px-Flag_of_Portugal.svg.png" class="phone-flag" alt="PT">
+                      +351
+                    </div>
+                    <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="912 345 678" maxlength="9"
+                           class="phone-input">
+                  </div>
+                  <small class="form-help">Insira o numero associado a sua conta MB WAY.</small>
+                </div>
+              <% } %>
             </div>
 
             <button type="submit" id="submitBtn" class="btn-submit">
-              Pagar &euro; 5,00 e Reagendar <i class="fas fa-check-circle"></i>
+              <% if (order.country === 'BR') { %>
+                Pagar R$ 25,00 e Reagendar <i class="fas fa-check-circle"></i>
+              <% } else { %>
+                Pagar &euro; 5,00 e Reagendar <i class="fas fa-check-circle"></i>
+              <% } %>
             </button>
           </form>
 
@@ -130,9 +156,12 @@
   </div>
 
   <script>
-    // Show/Hide phone input based on payment method
+    var orderCountry = '<%= order.country || "PT" %>';
+
+    // Show/Hide phone input based on payment method (PT only)
     function togglePhoneInput(show) {
       var phoneGroup = document.getElementById('mbwayPhoneGroup');
+      if (!phoneGroup) return;
       var phoneInput = document.getElementById('phoneNumber');
 
       if (show) {
@@ -147,11 +176,13 @@
 
     // Initialize toggle state
     document.addEventListener('DOMContentLoaded', function() {
-      var mbwayRadio = document.querySelector('input[name="paymentMethod"][value="mbway"]');
-      if (mbwayRadio && mbwayRadio.checked) {
-        togglePhoneInput(true);
-      } else {
-        togglePhoneInput(false);
+      if (orderCountry !== 'BR') {
+        var mbwayRadio = document.querySelector('input[name="paymentMethod"][value="mbway"]');
+        if (mbwayRadio && mbwayRadio.checked) {
+          togglePhoneInput(true);
+        } else {
+          togglePhoneInput(false);
+        }
       }
     });
 
@@ -168,7 +199,7 @@
       var formData = new FormData(form);
       var data = Object.fromEntries(formData.entries());
 
-      // Validate MB WAY phone
+      // Validate MB WAY phone (PT only)
       if (data.paymentMethod === 'mbway') {
         var phone = document.getElementById('phoneNumber').value;
         if (!phone || phone.length < 9) {
@@ -195,7 +226,86 @@
         var result = await response.json();
 
         if (result.success) {
-          if (data.paymentMethod === 'mbway') {
+
+          // PIX Flow (Brazil)
+          if (data.paymentMethod === 'pix' || result.paymentMethod === 'pix') {
+            var pixHtml =
+              '<div style="text-align: center;">' +
+                '<div style="margin-bottom: 15px;">' +
+                  '<svg width="32" height="32" viewBox="0 0 512 512" fill="none" style="margin-bottom: 8px;">' +
+                    '<path d="M395.2 395.2c-13.6 13.6-31.7 21.1-50.9 21.1s-37.3-7.5-50.9-21.1l-79.3-79.3c-4.7-4.7-12.3-4.7-17 0l-79.3 79.3c-13.6 13.6-31.7 21.1-50.9 21.1s-37.3-7.5-50.9-21.1l-8.7-8.7 88-88c18.8-18.8 49.4-18.8 68.2 0l79.3 79.3c4.7 4.7 12.3 4.7 17 0l79.3-79.3c18.8-18.8 49.4-18.8 68.2 0l88 88-8.7 8.7z" fill="#32BCAD"/>' +
+                    '<path d="M395.2 116.8c13.6 13.6 21.1 31.7 21.1 50.9s-7.5 37.3-21.1 50.9l-79.3 79.3c-4.7 4.7-12.3 4.7-17 0l-79.3-79.3c-9.4-9.4-21.7-14.1-34.1-14.1s-24.7 4.7-34.1 14.1l-79.3 79.3c-4.7 4.7-12.3 4.7-17 0l-79.3-79.3c-28.1-28.1-28.1-73.7 0-101.8l8.7-8.7 88 88c18.8 18.8 49.4 18.8 68.2 0l79.3-79.3c4.7-4.7 12.3-4.7 17 0l79.3 79.3c18.8 18.8 49.4 18.8 68.2 0l88-88 8.7 8.7z" fill="#32BCAD"/>' +
+                  '</svg>' +
+                  '<h3 style="margin: 0; font-size: 1.1rem;">Pagamento PIX</h3>' +
+                '</div>';
+
+            if (result.qrCodeBase64) {
+              pixHtml += '<img src="data:image/png;base64,' + result.qrCodeBase64 + '" style="width: 200px; height: 200px; margin: 10px auto; display: block; border-radius: 8px;">';
+            } else if (result.qrCodeUrl) {
+              pixHtml += '<img src="' + result.qrCodeUrl + '" style="width: 200px; height: 200px; margin: 10px auto; display: block; border-radius: 8px;">';
+            }
+
+            if (result.pixCode) {
+              pixHtml +=
+                '<div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; margin: 15px 0; word-break: break-all; font-size: 11px; font-family: monospace; cursor: pointer;" onclick="navigator.clipboard.writeText(\'' + result.pixCode + '\'); this.style.background=\'#dcfce7\'; this.querySelector(\'small\').textContent=\'Copiado!\';">' +
+                  result.pixCode +
+                  '<br><small style="color: #16a34a; font-weight: 600;">Clique para copiar</small>' +
+                '</div>';
+            }
+
+            pixHtml +=
+                '<div style="margin: 15px 0; font-size: 1.3rem; font-weight: bold; color: #16a34a;">R$ 25,00</div>' +
+                '<div style="color: #666; font-size: 0.9rem;">Aguardando pagamento... <span id="countdown">1800</span>s</div>' +
+              '</div>';
+
+            Swal.fire({
+              title: '',
+              html: pixHtml,
+              showConfirmButton: false,
+              allowOutsideClick: false,
+              didOpen: function() {
+                var timeLeft = 1800;
+                var timer = setInterval(function() {
+                  var el = document.getElementById('countdown');
+                  if (el) {
+                    timeLeft--;
+                    var min = Math.floor(timeLeft / 60);
+                    var sec = timeLeft % 60;
+                    el.textContent = min + ':' + (sec < 10 ? '0' : '') + sec;
+                  }
+                  if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    Swal.fire({ title: 'Tempo Esgotado', text: 'O QR Code PIX expirou.', icon: 'warning' });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                  }
+                }, 1000);
+
+                // Poll for payment confirmation
+                var checkStatus = setInterval(async function() {
+                  try {
+                    var statusResponse = await fetch('/api/reenvio/' + result.paymentId + '/check-status');
+                    var statusResult = await statusResponse.json();
+                    if (statusResult.paid) {
+                      clearInterval(checkStatus);
+                      clearInterval(timer);
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Pagamento Confirmado!',
+                        text: 'Seu reenvio foi agendado com sucesso.',
+                        confirmButtonText: 'Ver Rastreio',
+                        confirmButtonColor: '#16a34a'
+                      }).then(function() {
+                        window.location.href = '/rastreio/<%= order.code %>';
+                      });
+                    }
+                  } catch(e) { console.error(e); }
+                }, 5000);
+              }
+            });
+
+          } else if (data.paymentMethod === 'mbway') {
+            // MBWay Flow (Portugal)
             Swal.fire({
               title: 'Pagamento Iniciado!',
               html:
@@ -253,7 +363,7 @@
             });
 
           } else {
-            // Multibanco Flow
+            // Multibanco Flow (Portugal)
             Swal.fire({
               title: 'Dados para Pagamento',
               html:

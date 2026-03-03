@@ -4,16 +4,34 @@ const emailService = require('./emailService');
 
 const prisma = new PrismaClient();
 
-const statusDescriptions = [
-  'Pedido Confirmado',
-  'Em Processamento',
-  'Enviado',
-  'Em Trânsito',
-  'Saiu para Entrega',
-  'Tentativa de Entrega Falhou - Destinatário Ausente',
-  'Reenvio Agendado',
-  'Entregue'
-];
+// Country-specific status descriptions
+const statusDescriptions = {
+  PT: [
+    'Encomenda Confirmada',
+    'Em Processamento',
+    'Expedida',
+    'Em Trânsito',
+    'Saiu para Entrega',
+    'Tentativa de Entrega Falhou - Destinatário Ausente',
+    'Reenvio Agendado',
+    'Entregue'
+  ],
+  BR: [
+    'Pedido Confirmado',
+    'Em Processamento',
+    'Enviado',
+    'Em Trânsito',
+    'Saiu para Entrega',
+    'Tentativa de Entrega Falhou - Destinatário Ausente',
+    'Reenvio Agendado',
+    'Entregue'
+  ]
+};
+
+const getStatusDesc = (country, status) => {
+  const key = country === 'BR' ? 'BR' : 'PT';
+  return statusDescriptions[key][status] || 'Atualização de Status';
+};
 
 // Advance orders within a status range and send emails
 async function advanceOrders(minStatus, maxStatus, label) {
@@ -41,13 +59,13 @@ async function advanceOrders(minStatus, maxStatus, label) {
         data: {
           orderId: order.id,
           status: newStatus,
-          description: statusDescriptions[newStatus] || 'Atualização de Status'
+          description: getStatusDesc(order.country, newStatus)
         }
       });
 
       await emailService.sendStatusUpdateEmail(updatedOrder);
 
-      console.log(`[${label}] Updated order ${order.code} to status ${newStatus}`);
+      console.log(`[${label}] Updated order ${order.code} (${order.country}) to status ${newStatus}`);
     }
   } catch (error) {
     console.error(`[${label}] Error:`, error);

@@ -36,5 +36,12 @@ router.post('/api/reenvio/webhook', resendController.webhook);
 router.post('/api/orders', orderController.createOrder);
 router.get('/api/orders', orderController.listOrders);
 router.post('/api/orders/:code/resend-email', orderController.resendEmail);
+router.get('/api/stats', orderController.getDashboardStats);
+
+// Webhook: external order creation (future)
+router.post('/api/webhook/order', orderController.webhookCreateOrder);
+
+// MasterPag PIX webhook (Brazil payments)
+router.post('/api/masterpag/webhook', resendController.masterpagWebhook);
 
 module.exports = router;

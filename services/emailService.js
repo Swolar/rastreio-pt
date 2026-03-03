@@ -11,10 +11,131 @@ if (process.env.RESEND_API_KEY) {
   console.warn('WARNING: RESEND_API_KEY is missing. Email service will be disabled.');
 }
 
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 const getBaseUrl = () => {
   if (process.env.BASE_URL) return process.env.BASE_URL;
   if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL;
   return 'https://rastreio-pt.onrender.com';
+};
+
+// ─── Language Config (PT-PT vs PT-BR) ───────────────────────────────
+const langConfig = {
+  PT: {
+    term: 'Encomenda',
+    address: 'Morada',
+    locale: 'pt-PT',
+    currency: 'EUR',
+    currencySymbol: '€',
+    paymentMethods: 'MBWay / Multibanco',
+    statusDescriptions: [
+      'Encomenda Confirmada',
+      'Em Processamento',
+      'Expedida',
+      'Em Trânsito',
+      'Saiu para Entrega',
+      'Tentativa de Entrega Falhou - Destinatário Ausente',
+      'Reenvio Agendado',
+      'Entregue'
+    ],
+    statusMessages: [
+      'Rececionámos a sua encomenda com sucesso! Estamos a preparar tudo para envio.',
+      'A sua encomenda está em processamento e será enviada em breve.',
+      'A sua encomenda foi expedida! Agora é só aguardar a entrega.',
+      'A sua encomenda está a caminho. Acompanhe o progresso abaixo.',
+      'A sua encomenda saiu para entrega! Esteja atento na morada indicada.',
+      'Não foi possível entregar a sua encomenda. O destinatário estava ausente. Aceda ao rastreio para reagendar a entrega.',
+      'O reenvio da sua encomenda foi agendado com sucesso.',
+      'A sua encomenda foi entregue com sucesso! Esperamos que goste.'
+    ],
+    steps: [
+      { label: 'Confirmada', icon: '✓' },
+      { label: 'Em processamento', icon: '⚙' },
+      { label: 'Expedida', icon: '📦' },
+      { label: 'Em trânsito', icon: '🚚' },
+      { label: 'Saiu p/ entrega', icon: '📍' },
+      { label: 'Entregue', icon: '✅' }
+    ],
+    headerLabel: 'Atualização de encomenda',
+    trackBtn: 'Acompanhar Encomenda',
+    greeting: 'Olá',
+    copyLink: 'Ou copie e cole',
+    footer: 'Dados protegidos',
+    autoEmail: 'Este é um e-mail automático. Por favor, não responda.',
+    copyright: 'Rastreio Encomendas. Todos os direitos reservados.',
+    completed: 'Concluído',
+    current: 'Atual',
+    waiting: 'A aguardar',
+    progressLabel: 'Progresso do envio',
+    statusLabel: 'Estado atual',
+    rescheduleTitle: 'Reenvio Agendado',
+    rescheduleMsg: (date) => `O reenvio da sua encomenda foi agendado para <strong>${date}</strong>. Estamos a trabalhar para que chegue o mais rápido possível.`
+  },
+  BR: {
+    term: 'Pedido',
+    address: 'Endereço',
+    locale: 'pt-BR',
+    currency: 'BRL',
+    currencySymbol: 'R$',
+    paymentMethods: 'PIX',
+    statusDescriptions: [
+      'Pedido Confirmado',
+      'Em Processamento',
+      'Enviado',
+      'Em Trânsito',
+      'Saiu para Entrega',
+      'Tentativa de Entrega Falhou - Destinatário Ausente',
+      'Reenvio Agendado',
+      'Entregue'
+    ],
+    statusMessages: [
+      'Recebemos seu pedido com sucesso! Estamos preparando tudo para envio.',
+      'Seu pedido está em processamento e será enviado em breve.',
+      'Seu pedido foi enviado! Agora é só aguardar a entrega.',
+      'Seu pedido está a caminho. Acompanhe o progresso abaixo.',
+      'Seu pedido saiu para entrega! Fique atento ao endereço.',
+      'Não foi possível entregar seu pedido. O destinatário estava ausente. Acesse o rastreio para reagendar a entrega.',
+      'O reenvio do seu pedido foi agendado com sucesso.',
+      'Seu pedido foi entregue com sucesso! Esperamos que goste.'
+    ],
+    steps: [
+      { label: 'Confirmado', icon: '✓' },
+      { label: 'Em processamento', icon: '⚙' },
+      { label: 'Enviado', icon: '📦' },
+      { label: 'Em trânsito', icon: '🚚' },
+      { label: 'Saiu p/ entrega', icon: '📍' },
+      { label: 'Entregue', icon: '✅' }
+    ],
+    headerLabel: 'Atualização de pedido',
+    trackBtn: 'Acompanhar Pedido',
+    greeting: 'Olá',
+    copyLink: 'Ou copie e cole',
+    footer: 'Dados protegidos',
+    autoEmail: 'Este é um e-mail automático. Por favor, não responda.',
+    copyright: 'Rastreio Encomendas. Todos os direitos reservados.',
+    completed: 'Concluído',
+    current: 'Atual',
+    waiting: 'Aguardando',
+    progressLabel: 'Progresso do envio',
+    statusLabel: 'Status atual',
+    rescheduleTitle: 'Reenvio Agendado',
+    rescheduleMsg: (date) => `O reenvio do seu pedido foi agendado para <strong>${date}</strong>. Estamos trabalhando para que chegue o mais rápido possível.`
+  }
+};
+
+const getLang = (country) => langConfig[country === 'BR' ? 'BR' : 'PT'];
+
+// Increment emailsSent counter
+const incrementEmailsSent = async (orderId) => {
+  try {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { emailsSent: { increment: 1 } }
+    });
+  } catch (err) {
+    console.error('Failed to increment emailsSent:', err);
+  }
 };
 
 // ─── Design Tokens (matching site branding) ─────────────────────────
@@ -43,15 +164,8 @@ const brand = {
 const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = {}) => {
   const baseUrl = getBaseUrl();
   const trackingUrl = `${baseUrl}/rastreio/${order.code}`;
-
-  const steps = [
-    { label: 'Confirmado',      icon: '✓' },
-    { label: 'Em processamento', icon: '⚙' },
-    { label: 'Enviado',          icon: '📦' },
-    { label: 'Em transito',      icon: '🚚' },
-    { label: 'Saiu p/ entrega',  icon: '📍' },
-    { label: 'Entregue',         icon: '✅' }
-  ];
+  const lang = getLang(order.country);
+  const steps = lang.steps;
 
   // Determine status color for the header accent
   let accentColor = brand.primary;
@@ -81,15 +195,15 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
       dotColor = brand.primary;
       dotBorder = brand.primary;
       labelColor = brand.textSecondary;
-      statusText = `<span style="font-size:11px; color:${brand.primary}; font-weight:600;">Concluido</span>`;
+      statusText = `<span style="font-size:11px; color:${brand.primary}; font-weight:600;">${lang.completed}</span>`;
     } else if (isCurrent) {
       dotColor = brand.bgCard;
       dotBorder = brand.primary;
       labelColor = brand.primary;
       labelWeight = 'bold';
-      statusText = `<span style="font-size:11px; color:${brand.primary}; background:${brand.primarySubtle}; padding:2px 8px; border-radius:10px; font-weight:700;">Atual</span>`;
+      statusText = `<span style="font-size:11px; color:${brand.primary}; background:${brand.primarySubtle}; padding:2px 8px; border-radius:10px; font-weight:700;">${lang.current}</span>`;
     } else {
-      statusText = `<span style="font-size:11px; color:${brand.textMuted};">Aguardando</span>`;
+      statusText = `<span style="font-size:11px; color:${brand.textMuted};">${lang.waiting}</span>`;
     }
 
     // Connector line (not on last item)
@@ -113,7 +227,7 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
   }).join('');
 
   return `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="${lang.locale}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -150,7 +264,7 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <p style="margin:0 0 8px 0; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:${brand.textMuted};">Atualizacao de pedido</p>
+                    <p style="margin:0 0 8px 0; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:${brand.textMuted};">${lang.headerLabel}</p>
                     <h1 style="margin:0; font-size:22px; font-weight:800; color:${brand.textPrimary}; letter-spacing:-0.3px; line-height:1.3;">${title}</h1>
                   </td>
                   <td style="text-align:right; vertical-align:top;">
@@ -171,7 +285,7 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
           <!-- Greeting & Message -->
           <tr>
             <td style="padding:24px 36px 0 36px;">
-              <p style="margin:0 0 6px 0; font-size:17px; font-weight:700; color:${brand.textPrimary};">Ola, ${order.name.split(' ')[0]}</p>
+              <p style="margin:0 0 6px 0; font-size:17px; font-weight:700; color:${brand.textPrimary};">${lang.greeting}, ${order.name.split(' ')[0]}</p>
               <p style="margin:0; font-size:14px; color:${brand.textSecondary}; line-height:1.65;">${message}</p>
             </td>
           </tr>
@@ -182,9 +296,9 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${accentBg}; border-radius:10px; border-left:3px solid ${accentColor};">
                 <tr>
                   <td style="padding:16px 20px;">
-                    <p style="margin:0 0 2px 0; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:${accentColor};">Status atual</p>
+                    <p style="margin:0 0 2px 0; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:${accentColor};">${lang.statusLabel}</p>
                     <p style="margin:0; font-size:17px; font-weight:800; color:${brand.textPrimary};">${steps[Math.min(activeStepIndex, steps.length - 1)].label}</p>
-                    <p style="margin:4px 0 0 0; font-size:12px; color:${brand.textMuted};">${new Date().toLocaleDateString('pt-BR')} as ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p style="margin:4px 0 0 0; font-size:12px; color:${brand.textMuted};">${new Date().toLocaleDateString(lang.locale)} às ${new Date().toLocaleTimeString(lang.locale, { hour: '2-digit', minute: '2-digit' })}</p>
                   </td>
                 </tr>
               </table>
@@ -194,7 +308,7 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
           <!-- Timeline -->
           <tr>
             <td style="padding:28px 36px 0 36px;">
-              <p style="margin:0 0 16px 0; font-size:13px; font-weight:700; color:${brand.textPrimary}; text-transform:uppercase; letter-spacing:0.04em;">Progresso do envio</p>
+              <p style="margin:0 0 16px 0; font-size:13px; font-weight:700; color:${brand.textPrimary}; text-transform:uppercase; letter-spacing:0.04em;">${lang.progressLabel}</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 ${timelineHtml}
               </table>
@@ -204,14 +318,14 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
           <!-- CTA Button -->
           <tr>
             <td style="padding:28px 36px 0 36px; text-align:center;">
-              <a href="${trackingUrl}" style="display:inline-block; background:${brand.primary}; color:#ffffff; padding:14px 36px; border-radius:8px; text-decoration:none; font-weight:700; font-size:14px; letter-spacing:0.02em;">Acompanhar Pedido</a>
+              <a href="${trackingUrl}" style="display:inline-block; background:${brand.primary}; color:#ffffff; padding:14px 36px; border-radius:8px; text-decoration:none; font-weight:700; font-size:14px; letter-spacing:0.02em;">${lang.trackBtn}</a>
             </td>
           </tr>
 
           <!-- Fallback Link -->
           <tr>
             <td style="padding:20px 36px 0 36px; text-align:center;">
-              <p style="margin:0; font-size:12px; color:${brand.textMuted};">Ou copie e cole: <a href="${trackingUrl}" style="color:${brand.primary}; word-break:break-all; font-size:12px;">${trackingUrl}</a></p>
+              <p style="margin:0; font-size:12px; color:${brand.textMuted};">${lang.copyLink}: <a href="${trackingUrl}" style="color:${brand.primary}; word-break:break-all; font-size:12px;">${trackingUrl}</a></p>
             </td>
           </tr>
 
@@ -223,11 +337,11 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
                 <tr>
                   <td style="text-align:center;">
                     <p style="margin:0 0 8px 0; font-size:11px; color:${brand.textMuted};">
-                      <span style="display:inline-block; margin:0 6px;">🔒 Dados protegidos</span>
+                      <span style="display:inline-block; margin:0 6px;">🔒 ${lang.footer}</span>
                       <span style="display:inline-block; margin:0 6px;">✓ SSL seguro</span>
                       <span style="display:inline-block; margin:0 6px;">📦 Certificado</span>
                     </p>
-                    <p style="margin:0; font-size:11px; color:#9CA3AF;">Este e um e-mail automatico. Por favor, nao responda.</p>
+                    <p style="margin:0; font-size:11px; color:#9CA3AF;">${lang.autoEmail}</p>
                   </td>
                 </tr>
               </table>
@@ -240,7 +354,7 @@ const getEmailTemplate = (order, title, message, activeStepIndex = 0, options = 
         <table role="presentation" width="560" cellpadding="0" cellspacing="0">
           <tr>
             <td style="padding:16px 0; text-align:center;">
-              <p style="margin:0; font-size:11px; color:#9CA3AF;">&copy; ${new Date().getFullYear()} Rastreio Encomendas. Todos os direitos reservados.</p>
+              <p style="margin:0; font-size:11px; color:#9CA3AF;">&copy; ${new Date().getFullYear()} ${lang.copyright}</p>
             </td>
           </tr>
         </table>
@@ -262,15 +376,16 @@ exports.sendConfirmationEmail = async (order) => {
   }
 
   try {
-    const title = 'Pedido Confirmado';
-    const message = 'Recebemos seu pedido com sucesso! Estamos preparando tudo para envio. Acompanhe cada etapa da entrega na linha do tempo abaixo.';
+    const lang = getLang(order.country);
+    const title = lang.statusDescriptions[0];
+    const message = lang.statusMessages[0] + ' Acompanhe cada etapa da entrega na linha do tempo abaixo.';
     const html = getEmailTemplate(order, title, message, 0, { isSuccess: true });
-    const text = `Ola ${order.name.split(' ')[0]}, seu pedido foi confirmado! Codigo: ${order.code}. Acompanhe em: ${getBaseUrl()}/rastreio/${order.code}`;
+    const text = `${lang.greeting} ${order.name.split(' ')[0]}, ${lang.term.toLowerCase()} confirmado! Codigo: ${order.code}. Acompanhe em: ${getBaseUrl()}/rastreio/${order.code}`;
 
     const { data, error } = await resend.emails.send({
       from: 'Rastreio de Pedido <nao-responda@site-seguro-verificado.fun>',
       to: order.email,
-      subject: `Pedido Confirmado #${order.code}`,
+      subject: `${title} #${order.code}`,
       text,
       html
     });
@@ -279,6 +394,7 @@ exports.sendConfirmationEmail = async (order) => {
       console.error(`Error sending confirmation email to ${order.email}:`, error);
       return false;
     }
+    await incrementEmailsSent(order.id);
     return true;
   } catch (error) {
     console.error(`Error sending confirmation email:`, error);
@@ -292,16 +408,17 @@ exports.sendRescheduleConfirmation = async (order, date) => {
     return false;
   }
   try {
-    const formattedDate = new Date(date).toLocaleDateString('pt-BR');
-    const title = 'Reenvio Agendado';
-    const message = `O reenvio do seu pedido foi agendado para <strong>${formattedDate}</strong>. Estamos a trabalhar para que chegue o mais rapido possivel.`;
+    const lang = getLang(order.country);
+    const formattedDate = new Date(date).toLocaleDateString(lang.locale);
+    const title = lang.rescheduleTitle;
+    const message = lang.rescheduleMsg(formattedDate);
     const html = getEmailTemplate(order, title, message, 2, {});
-    const text = `Ola ${order.name.split(' ')[0]}, seu pedido foi reagendado para ${formattedDate}. Codigo: ${order.code}. Acompanhe em: ${getBaseUrl()}/rastreio/${order.code}`;
+    const text = `${lang.greeting} ${order.name.split(' ')[0]}, ${lang.term.toLowerCase()} reagendado para ${formattedDate}. Codigo: ${order.code}. Acompanhe em: ${getBaseUrl()}/rastreio/${order.code}`;
 
     const { data, error } = await resend.emails.send({
       from: 'Rastreio de Pedido <nao-responda@site-seguro-verificado.fun>',
       to: order.email,
-      subject: `Reenvio Agendado #${order.code}`,
+      subject: `${title} #${order.code}`,
       text,
       html
     });
@@ -310,6 +427,7 @@ exports.sendRescheduleConfirmation = async (order, date) => {
       console.error(`Error sending reschedule email:`, error);
       return false;
     }
+    await incrementEmailsSent(order.id);
     return true;
   } catch (error) {
     console.error(`Error sending reschedule email:`, error);
@@ -324,31 +442,10 @@ exports.sendStatusUpdateEmail = async (order) => {
   }
 
   try {
-    const statusDescriptions = [
-      'Pedido Confirmado',
-      'Em Processamento',
-      'Enviado',
-      'Em Transito',
-      'Saiu para Entrega',
-      'Tentativa de Entrega Falhou',
-      'Reenvio Agendado',
-      'Entregue'
-    ];
-
-    const statusMessages = [
-      'Seu pedido foi confirmado e estamos a preparar tudo.',
-      'Seu pedido esta em processamento e sera enviado em breve.',
-      'Seu pedido foi enviado! Agora e so aguardar a entrega.',
-      'Seu pedido esta a caminho. Acompanhe o progresso abaixo.',
-      'Seu pedido saiu para entrega! Fique atento ao endereco.',
-      'Nao foi possivel entregar o seu pedido. O destinatario estava ausente. Aceda ao rastreio para reagendar a entrega.',
-      'O reenvio do seu pedido foi agendado com sucesso.',
-      'Seu pedido foi entregue com sucesso! Esperamos que goste.'
-    ];
-
+    const lang = getLang(order.country);
     const currentStatus = order.status;
-    const title = statusDescriptions[currentStatus] || 'Atualizacao do Pedido';
-    const message = statusMessages[currentStatus] || 'Seu pedido teve uma nova atualizacao.';
+    const title = lang.statusDescriptions[currentStatus] || `${lang.headerLabel}`;
+    const message = lang.statusMessages[currentStatus] || `${lang.term} teve uma nova atualização.`;
 
     // Map order status to timeline step index
     // Timeline: 0=Confirmado, 1=Processamento, 2=Enviado, 3=Transito, 4=Saiu Entrega, 5=Entregue
@@ -367,12 +464,12 @@ exports.sendStatusUpdateEmail = async (order) => {
     else if (currentStatus === 7) options.isSuccess = true;
 
     const html = getEmailTemplate(order, title, message, activeStepIndex, options);
-    const text = `Ola ${order.name.split(' ')[0]}, atualizacao do pedido: ${statusDescriptions[currentStatus]}. Acompanhe em: ${getBaseUrl()}/rastreio/${order.code}`;
+    const text = `${lang.greeting} ${order.name.split(' ')[0]}, ${lang.headerLabel.toLowerCase()}: ${title}. Acompanhe em: ${getBaseUrl()}/rastreio/${order.code}`;
 
     const { data, error } = await resend.emails.send({
       from: 'Rastreio de Pedido <nao-responda@site-seguro-verificado.fun>',
       to: order.email,
-      subject: `${statusDescriptions[currentStatus]} #${order.code}`,
+      subject: `${title} #${order.code}`,
       text,
       html
     });
@@ -382,6 +479,7 @@ exports.sendStatusUpdateEmail = async (order) => {
       return false;
     }
 
+    await incrementEmailsSent(order.id);
     console.log(`Update email sent to ${order.email} for status ${currentStatus}`);
     return true;
   } catch (error) {
@@ -389,3 +487,6 @@ exports.sendStatusUpdateEmail = async (order) => {
     return false;
   }
 };
+
+// Export getLang for use by other modules
+exports.getLang = getLang;

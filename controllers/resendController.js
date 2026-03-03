@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const emailService = require('../services/emailService');
+const masterpagService = require('../services/masterpagService');
 
 // Helper to calculate dates
 const getDateLimits = () => {
@@ -100,96 +101,124 @@ exports.createPayment = async (req, res) => {
       return res.status(400).json({ error: 'Data inválida. Escolha uma data a partir de 7 dias.' });
     }
 
+    // Determine fee based on country
+    const isBrazil = order.country === 'BR';
+    const feeAmount = isBrazil
+      ? parseFloat(process.env.REDELIVERY_FEE_BRL || '25.00')
+      : parseFloat(process.env.REDELIVERY_FEE_EUR || '5.00');
+    const currency = isBrazil ? 'BRL' : 'EUR';
+
     // Create Payment Record (Pending)
     const payment = await prisma.resendPayment.create({
       data: {
         orderId: order.id,
         attemptNumber: order.resendAttempts + 1,
-        amount: 5.00,
-        method: paymentMethod,
+        amount: feeAmount,
+        currency: currency,
+        method: isBrazil ? 'pix' : paymentMethod,
         status: 'PENDING',
-        scheduledDate: new Date(redeliveryDate) // Store the date user selected
+        scheduledDate: new Date(redeliveryDate)
       }
     });
 
-    // --- API INTEGRATION (WayMB) ---
-    // If credentials are valid, call API. Otherwise, simulate.
-    const waymbClientId = process.env.WAYMB_CLIENT_ID;
-    const waymbClientSecret = process.env.WAYMB_CLIENT_SECRET;
-    const waymbAccountEmail = process.env.WAYMB_ACCOUNT_EMAIL;
-    
-    let apiResponse = null;
-
-    if (waymbClientId && waymbClientId !== 'CHANGE_ME') {
-        try {
-            const payerData = {
-                email: order.email || 'cliente@exemplo.com',
-                name: order.name || 'Cliente',
-                document: '999999990', // Default NIF if missing
-                phone: phoneNumber || '910000000' // Use provided phone or default
-            };
-
-            const payload = {
-                client_id: waymbClientId,
-                client_secret: waymbClientSecret,
-                account_email: waymbAccountEmail,
-                amount: 5.00,
-                currency: 'EUR',
-                method: paymentMethod,
-                payer: payerData,
-                reference: `RESEND-${order.code}-${payment.attemptNumber}`,
-                callback_url: `${process.env.BASE_URL}/api/reenvio/webhook`
-            };
-
-            const response = await axios.post('https://api.waymb.com/transactions/create', payload);
-            apiResponse = response.data;
-            
-            console.log('WayMB Response:', apiResponse);
-        } catch (apiError) {
-            console.error('WayMB API Error:', apiError.response?.data || apiError.message);
-            // Return actual error to frontend
-            return res.status(500).json({ 
-                success: false, 
-                error: 'Erro na comunicação com gateway de pagamento. Verifique se o email da conta está correto.',
-                details: apiError.response?.data || apiError.message
-            });
-        }
-    } else {
-        // Only simulate if no credentials provided (Dev mode)
-        // But user wants to remove simulation, so we can just error out if no creds in prod
-        // For now, keep simulation ONLY if creds are missing/default
-    }
-
-    // If API returned data, use it.
     let responseData = {
       success: true,
       paymentId: payment.id,
       amount: payment.amount,
-      paymentMethod: payment.method
+      currency: currency,
+      paymentMethod: isBrazil ? 'pix' : payment.method
     };
 
-    if (apiResponse && (apiResponse.statusCode === 200 || apiResponse.transactionID)) {
-       responseData.transactionID = apiResponse.transactionID;
-       
-       if (paymentMethod === 'mbway') {
-         // MB WAY success
-         responseData.message = "Pedido de pagamento enviado";
-         responseData.phoneNumber = phoneNumber;
-       } else if (paymentMethod === 'multibanco' && apiResponse.referenceData) {
-         responseData.entity = apiResponse.referenceData.entity;
-         responseData.reference = apiResponse.referenceData.reference;
-       }
+    // --- ROUTING: BR = MasterPag PIX, PT = WayMB ---
+    if (isBrazil) {
+      // PIX via MasterPag
+      try {
+        const pixResult = await masterpagService.createPixPayment({
+          amount: feeAmount,
+          reference: `RESEND-${order.code}-${payment.attemptNumber}`,
+          payer: {
+            name: order.name,
+            email: order.email,
+            cpf: order.cpf,
+            phone: order.phone
+          },
+          callbackUrl: `${process.env.BASE_URL}/api/masterpag/webhook`
+        });
+
+        responseData.transactionId = pixResult.transactionId;
+        responseData.pixCode = pixResult.pixCode;
+        responseData.qrCodeBase64 = pixResult.qrCodeBase64;
+        responseData.qrCodeUrl = pixResult.qrCodeUrl;
+        responseData.expiresAt = pixResult.expiresAt;
+        responseData.simulated = pixResult.simulated || false;
+      } catch (pixError) {
+        console.error('PIX Error:', pixError.message);
+        return res.status(500).json({
+          success: false,
+          error: 'Erro ao gerar pagamento PIX.',
+          details: pixError.message
+        });
+      }
     } else {
-       // If we reached here without apiResponse and without error, it means we are in simulation mode (no creds)
-       // OR API failed silently (shouldn't happen with above catch)
-       
-       if (paymentMethod === 'mbway') {
-         responseData.message = 'Simulação MBWAY (Confirme no App)';
-         responseData.phoneNumber = phoneNumber;
-       } else {
-         responseData.entity = '12345';
-         responseData.reference = '123 456 789';
-       }
+      // WayMB (Portugal) - existing logic
+      const waymbClientId = process.env.WAYMB_CLIENT_ID;
+      const waymbClientSecret = process.env.WAYMB_CLIENT_SECRET;
+      const waymbAccountEmail = process.env.WAYMB_ACCOUNT_EMAIL;
+
+      let apiResponse = null;
+
+      if (waymbClientId && waymbClientId !== 'CHANGE_ME') {
+        try {
+          const payerData = {
+            email: order.email || 'cliente@exemplo.com',
+            name: order.name || 'Cliente',
+            document: '999999990',
+            phone: phoneNumber || '910000000'
+          };
+
+          const payload = {
+            client_id: waymbClientId,
+            client_secret: waymbClientSecret,
+            account_email: waymbAccountEmail,
+            amount: feeAmount,
+            currency: 'EUR',
+            method: paymentMethod,
+            payer: payerData,
+            reference: `RESEND-${order.code}-${payment.attemptNumber}`,
+            callback_url: `${process.env.BASE_URL}/api/reenvio/webhook`
+          };
+
+          const response = await axios.post('https://api.waymb.com/transactions/create', payload);
+          apiResponse = response.data;
+          console.log('WayMB Response:', apiResponse);
+        } catch (apiError) {
+          console.error('WayMB API Error:', apiError.response?.data || apiError.message);
+          return res.status(500).json({
+            success: false,
+            error: 'Erro na comunicação com gateway de pagamento.',
+            details: apiError.response?.data || apiError.message
+          });
+        }
+      }
+
+      if (apiResponse && (apiResponse.statusCode === 200 || apiResponse.transactionID)) {
+        responseData.transactionID = apiResponse.transactionID;
+        if (paymentMethod === 'mbway') {
+          responseData.message = "Pedido de pagamento enviado";
+          responseData.phoneNumber = phoneNumber;
+        } else if (paymentMethod === 'multibanco' && apiResponse.referenceData) {
+          responseData.entity = apiResponse.referenceData.entity;
+          responseData.reference = apiResponse.referenceData.reference;
+        }
+      } else {
+        if (paymentMethod === 'mbway') {
+          responseData.message = 'Simulação MBWAY (Confirme no App)';
+          responseData.phoneNumber = phoneNumber;
+        } else {
+          responseData.entity = '12345';
+          responseData.reference = '123 456 789';
+        }
+      }
     }
 
     return res.json(responseData);
@@ -382,4 +411,94 @@ exports.webhook = async (req, res) => {
     }
     
     res.sendStatus(200);
+};
+
+// MasterPag PIX Webhook handler
+exports.masterpagWebhook = async (req, res) => {
+  const data = req.body;
+  console.log('MasterPag Webhook received:', data);
+
+  try {
+    // Validate webhook signature
+    const signature = req.headers['x-masterpag-signature'] || '';
+    if (!masterpagService.validateWebhook(data, signature)) {
+      console.warn('MasterPag webhook signature validation failed');
+      return res.sendStatus(401);
+    }
+
+    const isPaid = data.status === 'PAID' || data.status === 'COMPLETED' || data.status === 'APPROVED';
+    if (!isPaid) {
+      return res.sendStatus(200);
+    }
+
+    // Parse reference: RESEND-{code}-{attempt}
+    const reference = data.reference || data.external_reference || '';
+    if (!reference.startsWith('RESEND-')) {
+      return res.sendStatus(200);
+    }
+
+    const lastDashIndex = reference.lastIndexOf('-');
+    const attemptStr = reference.substring(lastDashIndex + 1);
+    const code = reference.substring(7, lastDashIndex); // Skip "RESEND-"
+    const attempt = parseInt(attemptStr);
+
+    if (!code || isNaN(attempt)) {
+      return res.sendStatus(200);
+    }
+
+    const order = await prisma.order.findUnique({ where: { code } });
+    if (!order) {
+      return res.sendStatus(200);
+    }
+
+    // Find the pending payment
+    const payment = await prisma.resendPayment.findFirst({
+      where: {
+        orderId: order.id,
+        attemptNumber: attempt,
+        status: 'PENDING'
+      }
+    });
+
+    if (!payment) {
+      return res.sendStatus(200);
+    }
+
+    // Mark as PAID
+    await prisma.resendPayment.update({
+      where: { id: payment.id },
+      data: { status: 'PAID', paidAt: new Date() }
+    });
+
+    // Update Order
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        resendAttempts: attempt,
+        scheduledDate: payment.scheduledDate,
+        status: 6,
+        resendStatus: 'ACTIVE'
+      }
+    });
+
+    // Log Event
+    await prisma.event.create({
+      data: {
+        orderId: order.id,
+        status: 6,
+        description: `Reagendamento confirmado via PIX (Tentativa ${attempt}/5). Data: ${payment.scheduledDate ? payment.scheduledDate.toLocaleDateString('pt-BR') : 'N/A'}`
+      }
+    });
+
+    // Send Email
+    if (payment.scheduledDate) {
+      await emailService.sendRescheduleConfirmation(order, payment.scheduledDate);
+    }
+
+    console.log(`MasterPag payment confirmed for Order ${code}`);
+  } catch (err) {
+    console.error('MasterPag webhook processing error:', err);
+  }
+
+  res.sendStatus(200);
 };
