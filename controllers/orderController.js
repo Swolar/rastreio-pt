@@ -218,8 +218,7 @@ exports.resendEmail = async (req, res) => {
 exports.listOrders = async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 50
+      orderBy: { createdAt: 'desc' }
     });
     res.json(orders);
   } catch (error) {
