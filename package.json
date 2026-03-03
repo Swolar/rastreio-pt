@@ -1,18 +1,17 @@
 {
-  "name": "rastreio-encomendas",
-  "version": "1.0.0",
-  "description": "",
+  "name": "saas-rastreio",
+  "version": "2.0.0",
+  "description": "SaasRastreio - Sistema de rastreamento de encomendas",
   "main": "index.js",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
     "start": "node index.js",
-    "build": "npx prisma generate",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npx prisma generate"
   },
   "keywords": [],
-  "author": "",
+  "author": "SaasRastreio",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -23,7 +22,6 @@
     "ejs": "^4.0.1",
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.1",
     "prisma": "^5.10.0",
     "resend": "^6.9.2"
   }
